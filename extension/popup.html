@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Monitor</title>
+    <link rel="stylesheet" href="popup.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="root">
+        <!-- Loading state -->
+        <div id="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>読み込み中...</p>
+        </div>
+
+        <!-- Login form -->
+        <div id="login-form" class="form-container" style="display: none;">
+            <div class="header">
+                <h1><i class="fas fa-globe"></i> Website Monitor</h1>
+                <p>ウェブサイトの変更を監視して通知を受け取ろう</p>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="login">ログイン</button>
+                <button class="tab-btn" data-tab="register">新規登録</button>
+            </div>
+
+            <!-- Login tab -->
+            <div id="login-tab" class="tab-content active">
+                <form id="loginForm" class="form">
+                    <div class="form-group">
+                        <label for="loginUsername">ユーザー名またはメールアドレス</label>
+                        <input type="text" id="loginUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">パスワード</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> ログイン
+                    </button>
+                </form>
+            </div>
+
+            <!-- Register tab -->
+            <div id="register-tab" class="tab-content">
+                <form id="registerForm" class="form">
+                    <div class="form-group">
+                        <label for="registerUsername">ユーザー名</label>
+                        <input type="text" id="registerUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">メールアドレス</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">パスワード</label>
+                        <input type="password" id="registerPassword" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> 登録
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main dashboard -->
+        <div id="dashboard" class="dashboard-container" style="display: none;">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <div class="header-left">
+                    <h1><i class="fas fa-globe"></i> Website Monitor</h1>
+                    <div class="user-info">
+                        <span id="username"></span>
+                        <button id="logoutBtn" class="btn-icon">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="addSiteBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> サイト追加
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="sites">
+                    <i class="fas fa-list"></i> 監視サイト
+                </button>
+                <button class="nav-tab" data-tab="notifications">
+                    <i class="fas fa-bell"></i> 通知設定
+                </button>
+                <button class="nav-tab" data-tab="profile">
+                    <i class="fas fa-user"></i> プロフィール
+                </button>
+            </div>
+
+            <!-- Sites tab -->
+            <div id="sites-tab" class="tab-content active">
+                <div class="sites-container">
+                    <div id="sitesList" class="sites-list">
+                        <!-- Sites will be loaded here -->
+                    </div>
+                    <div id="noSites" class="no-sites" style="display: none;">
+                        <i class="fas fa-plus-circle"></i>
+                        <h3>監視サイトがありません</h3>
+                        <p>最初のサイトを追加して監視を開始しましょう</p>
+                        <button class="btn btn-primary" onclick="showAddSiteModal()">
+                            <i class="fas fa-plus"></i> サイトを追加
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications tab -->
+            <div id="notifications-tab" class="tab-content">
+                <div class="notifications-container">
+                    <div class="section">
+                        <h3><i class="fas fa-cog"></i> 通知設定</h3>
+                        <div class="notification-settings">
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="emailEnabled">
+                                    <span class="slider"></span>
+                                </label>
+                                <div class="setting-info">
+                                    <h4>メール通知</h4>
+                                    <p>ウェブサイトの変更をメールで通知</p>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="lineEnabled">
+                                    <span class="slider"></span>
+                                </label>
+                                <div class="setting-info">
+                                    <h4>LINE通知</h4>
+                                    <p>ウェブサイトの変更をLINEで通知</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="line-config" id="lineConfig" style="display: none;">
+                            <label for="lineUserId">LINE User ID</label>
+                            <input type="text" id="lineUserId" placeholder="LINE User IDを入力">
+                            <p class="help-text">LINE通知を使用するには、LINE User IDが必要です</p>
+                        </div>
+                        <div class="test-buttons">
+                            <button id="testEmailBtn" class="btn btn-secondary">
+                                <i class="fas fa-envelope"></i> メールテスト
+                            </button>
+                            <button id="testLineBtn" class="btn btn-secondary">
+                                <i class="fab fa-line"></i> LINEテスト
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile tab -->
+            <div id="profile-tab" class="tab-content">
+                <div class="profile-container">
+                    <div class="section">
+                        <h3><i class="fas fa-user"></i> プロフィール</h3>
+                        <form id="profileForm" class="form">
+                            <div class="form-group">
+                                <label for="profileEmail">メールアドレス</label>
+                                <input type="email" id="profileEmail" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 更新
+                            </button>
+                        </form>
+                    </div>
+                    <div class="section">
+                        <h3><i class="fas fa-key"></i> パスワード変更</h3>
+                        <form id="passwordForm" class="form">
+                            <div class="form-group">
+                                <label for="currentPassword">現在のパスワード</label>
+                                <input type="password" id="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">新しいパスワード</label>
+                                <input type="password" id="newPassword" required minlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="fas fa-key"></i> パスワード変更
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Site Modal -->
+        <div id="addSiteModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-plus"></i> サイトを追加</h3>
+                    <button class="modal-close" onclick="closeModal('addSiteModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="addSiteForm" class="form">
+                    <div class="form-group">
+                        <label for="siteName">サイト名</label>
+                        <input type="text" id="siteName" required placeholder="例: 小林製薬 廃盤情報">
+                    </div>
+                    <div class="form-group">
+                        <label for="siteUrl">URL</label>
+                        <input type="url" id="siteUrl" required placeholder="https://example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="checkInterval">チェック間隔</label>
+                        <select id="checkInterval" required>
+                            <option value="1">1時間</option>
+                            <option value="6">6時間</option>
+                            <option value="12">12時間</option>
+                            <option value="24" selected>24時間</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="keywords">キーワード（オプション）</label>
+                        <input type="text" id="keywords" placeholder="製造終了,新商品,リニューアル">
+                        <p class="help-text">カンマ区切りで複数指定可能</p>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addSiteModal')">
+                            キャンセル
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> 追加
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Site Modal -->
+        <div id="editSiteModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-edit"></i> サイトを編集</h3>
+                    <button class="modal-close" onclick="closeModal('editSiteModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="editSiteForm" class="form">
+                    <input type="hidden" id="editSiteId">
+                    <div class="form-group">
+                        <label for="editSiteName">サイト名</label>
+                        <input type="text" id="editSiteName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editSiteUrl">URL</label>
+                        <input type="url" id="editSiteUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCheckInterval">チェック間隔</label>
+                        <select id="editCheckInterval" required>
+                            <option value="1">1時間</option>
+                            <option value="6">6時間</option>
+                            <option value="12">12時間</option>
+                            <option value="24">24時間</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editKeywords">キーワード（オプション）</label>
+                        <input type="text" id="editKeywords">
+                    </div>
+                    <div class="form-group">
+                        <label class="switch">
+                            <input type="checkbox" id="editSiteActive">
+                            <span class="slider"></span>
+                        </label>
+                        <span>監視を有効にする</span>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editSiteModal')">
+                            キャンセル
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> 更新
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" class="notification" style="display: none;">
+            <div class="notification-content">
+                <i id="notificationIcon" class="fas fa-info-circle"></i>
+                <span id="notificationMessage"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
