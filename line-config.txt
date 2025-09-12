@@ -1,0 +1,12 @@
+# Copy these lines to your .env file:
+
+# LINE Messaging API
+LINE_CHANNEL_ID=2007999524
+LINE_CHANNEL_ACCESS_TOKEN=wC2ad1cBncKnmQ+oQwAZEwkQA/mktCaAccMdFYK1HeYhpKwVohZrfGvEOeS4l1By3sSlo2dpw8EpI4GyXoQpunqB35GfV2Uc86PEXm7/tqnV4woeC29Rl/iMuzaKQHusZ9pPhY/6Xi/zOs+8fFnNjQdB04t89/1O/w1cDnyilFU=
+LINE_CHANNEL_SECRET=21c0e68ea4b687bcd6f13f60485d69ce
+
+# Make sure your .env file also contains:
+# - Database configuration (DB_HOST, DB_USER, DB_NAME, DB_PORT)
+# - Server configuration (PORT, NODE_ENV, JWT_SECRET)
+# - Email configuration (EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS)
+# - Rate limiting (RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS)

@@ -1,0 +1,16 @@
+@echo off
+echo 🚀 Starting Website Monitor...
+echo.
+echo 📋 Prerequisites:
+echo   1. Make sure you have Node.js installed (https://nodejs.org/)
+echo   2. Make sure you have MySQL installed and running
+echo   3. Make sure you have Chrome browser installed
+echo.
+echo 🔧 First time setup:
+echo   1. Run "setup.bat" to set up the database
+echo   2. Edit the .env file with your database settings
+echo   3. Run "start.bat" to start the server
+echo.
+echo 📖 For detailed instructions, see README.md
+echo.
+pause

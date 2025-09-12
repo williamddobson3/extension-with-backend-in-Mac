@@ -444,6 +444,8 @@ input:checked + .slider:before {
     display: flex;
     gap: 8px;
     margin-top: 16px;
+    justify-content: center;
+    align-items: center;
 }
 
 /* Profile container */
@@ -513,7 +515,7 @@ input:checked + .slider:before {
 .form-actions {
     display: flex;
     gap: 8px;
-    justify-content: flex-end;
+    justify-content: center;
     margin-top: 20px;
 }
 
@@ -527,14 +529,24 @@ input:checked + .slider:before {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1001;
     animation: slideIn 0.3s ease;
-}
-
-.notification-content {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    min-width: 200px;
+    min-width: 300px;
+    max-width: 350px;
+}
+
+#notificationIcon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+#notificationMessage {
+    flex: 1;
+    white-space: pre-line;
+    line-height: 1.4;
+    font-size: 13px;
 }
 
 .notification.success {
@@ -549,6 +561,7 @@ input:checked + .slider:before {
     border-left: 4px solid #ffc107;
 }
 
+
 @keyframes slideIn {
     from {
         transform: translateX(100%);
@@ -562,9 +575,7 @@ input:checked + .slider:before {
 
 /* Responsive adjustments */
 @media (max-width: 400px) {
-    body {
-        width: 100%;
-    }
+    
     
     .dashboard-header {
         flex-direction: column;

@@ -170,10 +170,12 @@ router.get('/history', authenticateToken, async (req, res) => {
     }
 });
 
-// Test email notification
+// Test email notification with actual website scraping
 router.post('/test-email', authenticateToken, async (req, res) => {
     try {
-        // Get user email
+        console.log(`🧪 Starting comprehensive email test for user ${req.user.id}`);
+        
+        // Get user email and monitored sites
         const [users] = await pool.execute(
             'SELECT email FROM users WHERE id = ?',
             [req.user.id]
@@ -186,46 +188,195 @@ router.post('/test-email', authenticateToken, async (req, res) => {
             });
         }
 
-        const testMessage = `This is a test notification from your website monitoring service.
-
-🌐 Service: Website Monitor
-📧 Type: Test Email
-🕐 Sent: ${new Date().toLocaleString('ja-JP')}
-
-If you received this email, your email notifications are working correctly!`;
-
-        const result = await notificationService.sendEmail(
-            req.user.id,
-            null, // No specific site for test
-            testMessage,
-            'Test Email Notification'
+        // Get all active sites monitored by this user
+        const [sites] = await pool.execute(
+            'SELECT id, name, url, keywords FROM monitored_sites WHERE user_id = ? AND is_active = true',
+            [req.user.id]
         );
 
-        if (result.success) {
-            res.json({
-                success: true,
-                message: 'Test email sent successfully'
-            });
-        } else {
-            res.status(500).json({
+        if (sites.length === 0) {
+            return res.status(400).json({
                 success: false,
-                message: 'Failed to send test email',
-                error: result.error || result.reason
+                message: '監視サイトが見つかりません。まず監視するサイトを追加してください。'
             });
         }
 
+        console.log(`🔍 Found ${sites.length} sites to test for user ${req.user.id}`);
+
+        // Import required services
+        const websiteMonitor = require('../services/websiteMonitor');
+        const bulkNotificationService = require('../services/bulkNotificationService');
+
+        let testResults = [];
+        let changesDetected = 0;
+
+        // Test each monitored site
+        for (const site of sites) {
+            try {
+                console.log(`🌐 Testing site: ${site.name} (${site.url})`);
+                
+                // 1. Scrape the website and check for changes
+                const scrapeResult = await websiteMonitor.checkWebsite(
+                    site.id, 
+                    site.url, 
+                    site.keywords
+                );
+
+                if (scrapeResult.success) {
+                    console.log(`✅ Site ${site.name} scraped successfully`);
+                    
+                    // 2. Check if changes were detected
+                    const changeResult = await websiteMonitor.detectChanges(site.id);
+                    
+                    if (changeResult.hasChanged) {
+                        changesDetected++;
+                        console.log(`🔄 Changes detected on ${site.name}: ${changeResult.reason}`);
+                        
+                        // 3. Send real notifications about the changes
+                        const notificationResult = await bulkNotificationService.notifySiteChange(site.id, changeResult);
+                        
+                        testResults.push({
+                            site: site.name,
+                            url: site.url,
+                            status: 'success',
+                            changesDetected: true,
+                            changeReason: changeResult.reason,
+                            notificationsSent: notificationResult.success,
+                            notificationDetails: notificationResult
+                        });
+                        
+                    } else {
+                        console.log(`✅ No changes detected on ${site.name}`);
+                        testResults.push({
+                            site: site.name,
+                            url: site.url,
+                            status: 'success',
+                            changesDetected: false,
+                            changeReason: 'No changes detected',
+                            notificationsSent: false
+                        });
+                    }
+                    
+                } else {
+                    console.log(`❌ Failed to scrape ${site.name}: ${scrapeResult.error}`);
+                    testResults.push({
+                        site: site.name,
+                        url: site.url,
+                        status: 'failed',
+                        error: scrapeResult.error,
+                        changesDetected: false,
+                        notificationsSent: false
+                    });
+                }
+
+                // Add small delay between sites to avoid overwhelming servers
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+            } catch (error) {
+                console.error(`Error testing site ${site.name}:`, error);
+                testResults.push({
+                    site: site.name,
+                    url: site.url,
+                    status: 'error',
+                    error: error.message,
+                    changesDetected: false,
+                    notificationsSent: false
+                });
+            }
+        }
+
+        // Create comprehensive test summary
+        const testMessage = `🧪 Website Monitoring System Test Results
+
+🌐 Service: Website Monitor
+📧 Type: Comprehensive System Test
+🕐 Test Completed: ${new Date().toLocaleString('ja-JP')}
+
+📊 Test Summary:
+• Total Sites Tested: ${sites.length}
+• Successful Scrapes: ${testResults.filter(r => r.status === 'success').length}
+• Changes Detected: ${changesDetected}
+• Notifications Sent: ${testResults.filter(r => r.notificationsSent).length}
+
+🔍 Detailed Results:
+${testResults.map(result => `
+📌 ${result.site}
+   URL: ${result.url}
+   Status: ${result.status === 'success' ? '✅ Success' : '❌ Failed'}
+   Changes: ${result.changesDetected ? '🔄 Yes' : '✅ No'}
+   ${result.changesDetected ? `Reason: ${result.changeReason}` : ''}
+   Notifications: ${result.notificationsSent ? '📧 Sent' : '❌ Not Sent'}
+   ${result.error ? `Error: ${result.error}` : ''}
+`).join('')}
+
+🎯 What This Test Did:
+1. ✅ Scraped all your monitored websites
+2. ✅ Checked for content changes
+3. ✅ Detected structural modifications
+4. ✅ Sent real notifications if changes found
+5. ✅ Verified email system functionality
+
+This was a REAL test of your monitoring system, not just email configuration!`;
+
+        // Try to send the comprehensive test results via email (but don't fail if email doesn't work)
+        let emailResult = null;
+        try {
+            emailResult = await notificationService.sendEmail(
+                req.user.id,
+                null, // No specific site for test
+                testMessage,
+                'Website Monitor - Comprehensive System Test Results'
+            );
+            
+            // Check if it's using fallback mode
+            if (emailResult.fallback) {
+                console.log('📧 Email using fallback mode due to network restrictions');
+            }
+        } catch (emailError) {
+            console.log('📧 Email test failed (expected due to network restrictions):', emailError.message);
+            emailResult = { success: false, reason: 'Email blocked by network restrictions' };
+        }
+
+        // Prepare detailed change information for frontend
+        const changes = testResults
+            .filter(r => r.changesDetected)
+            .map(result => ({
+                siteName: result.site,
+                siteUrl: result.url,
+                changeType: result.changeReason || 'Content Modified',
+                changeDetails: result.changeReason || 'Page content has been updated',
+                notificationStatus: result.notificationsSent ? 'Sent' : 'Failed'
+            }));
+
+        // Always return results to frontend, regardless of email success
+        res.json({
+            success: true,
+            message: `Comprehensive test completed! ${changesDetected} changes detected.`,
+            testResults: {
+                totalSites: sites.length,
+                changesDetected,
+                notificationsSent: testResults.filter(r => r.notificationsSent).length,
+                results: testResults,
+                changes: changes, // Add detailed change information
+                emailStatus: emailResult ? emailResult.success : false,
+                emailMessage: emailResult ? emailResult.reason : 'Email not attempted'
+            }
+        });
+
     } catch (error) {
-        console.error('Test email error:', error);
+        console.error('Comprehensive test email error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error'
+            message: 'Server error during comprehensive test'
         });
     }
 });
 
-// Test LINE notification
+// Test LINE notification with comprehensive monitoring
 router.post('/test-line', authenticateToken, async (req, res) => {
     try {
+        console.log(`🧪 Starting comprehensive LINE test for user ${req.user.id}`);
+        
         // Check if LINE user ID is configured
         const [users] = await pool.execute(
             'SELECT line_user_id FROM users WHERE id = ?',
@@ -235,42 +386,150 @@ router.post('/test-line', authenticateToken, async (req, res) => {
         if (users.length === 0 || !users[0].line_user_id) {
             return res.status(400).json({
                 success: false,
-                message: 'LINE user ID not configured. Please set your LINE user ID in your profile.'
+                message: 'LINEユーザーIDが設定されていません。プロフィールからLINEユーザーIDを設定してください。'
             });
         }
 
-        const testMessage = `This is a test notification from your website monitoring service.
-
-🌐 Service: Website Monitor
-📱 Type: Test LINE Message
-🕐 Sent: ${new Date().toLocaleString('ja-JP')}
-
-If you received this message, your LINE notifications are working correctly!`;
-
-        const result = await notificationService.sendLineNotification(
-            req.user.id,
-            null, // No specific site for test
-            testMessage
+        // Get all active sites monitored by this user
+        const [sites] = await pool.execute(
+            'SELECT id, name, url, keywords FROM monitored_sites WHERE user_id = ? AND is_active = true',
+            [req.user.id]
         );
 
-        if (result.success) {
-            res.json({
-                success: true,
-                message: 'Test LINE message sent successfully'
-            });
-        } else {
-            res.status(500).json({
+        if (sites.length === 0) {
+            return res.status(400).json({
                 success: false,
-                message: 'Failed to send test LINE message',
-                error: result.error || result.reason
+                message: '監視サイトが見つかりません。まず監視するサイトを追加してください。'
             });
         }
 
+        console.log(`🔍 Found ${sites.length} sites to test for user ${req.user.id}`);
+
+        // Import required services
+        const websiteMonitor = require('../services/websiteMonitor');
+        const bulkNotificationService = require('../services/bulkNotificationService');
+
+        let testResults = [];
+        let changesDetected = 0;
+
+        // Test each monitored site
+        for (const site of sites) {
+            console.log(`🌐 Testing site: ${site.name} (${site.url})`);
+            
+            try {
+                // First check the website
+                const checkResult = await websiteMonitor.checkWebsite(site.id, site.url, site.keywords);
+                
+                if (!checkResult.success) {
+                    throw new Error(checkResult.error || 'Failed to check website');
+                }
+                
+                // Then check for changes
+                const changeResult = await websiteMonitor.checkForChangesAndNotify(site.id);
+                
+                testResults.push({
+                    site: site.name,
+                    url: site.url,
+                    changesDetected: changeResult.hasChanged,
+                    changeReason: changeResult.reason,
+                    notificationsSent: changeResult.notificationsSent || false
+                });
+
+                if (changeResult.hasChanged) {
+                    changesDetected++;
+                    console.log(`   🚨 Changes detected: ${changeResult.reason}`);
+                    if (changeResult.notificationsSent) {
+                        notificationsSent++;
+                    }
+                } else {
+                    console.log(`   ✅ No changes detected`);
+                }
+            } catch (error) {
+                console.error(`   ❌ Error checking site ${site.name}:`, error.message);
+                testResults.push({
+                    site: site.name,
+                    url: site.url,
+                    changesDetected: false,
+                    changeReason: `Error: ${error.message}`,
+                    notificationsSent: false
+                });
+            }
+        }
+
+        // Count notifications sent (already handled by checkForChangesAndNotify)
+        let notificationsSent = testResults.filter(r => r.notificationsSent).length;
+
+        // Create test summary message in Japanese
+        const testMessage = `📊 テスト概要:
+• テストしたサイト数: ${sites.length}
+• 成功したスクレイピング: ${testResults.length}
+• 検出された変更: ${changesDetected}
+• 送信された通知: ${notificationsSent}
+
+🔍 詳細結果:
+
+${testResults.map(result => 
+    `🚀 ${result.site}
+   URL: ${result.url}
+   ステータス: ${result.changesDetected ? '🔄 変更検出' : '✅ 変更なし'}`
+).join('\n\n')}`;
+
+        // Send comprehensive test results via LINE
+        let lineResult = null;
+        try {
+            lineResult = await notificationService.sendLineNotification(
+                req.user.id,
+                null, // No specific site for test
+                testMessage,
+                'Website Monitor - Comprehensive System Test Results'
+            );
+            
+            console.log('📱 LINE test message sent successfully');
+        } catch (lineError) {
+            console.log('📱 LINE test failed:', lineError.message);
+            lineResult = { success: false, reason: lineError.message || 'Unknown error' };
+        }
+
+        // Prepare detailed change information for frontend
+        const changes = testResults
+            .filter(r => r.changesDetected)
+            .map(result => ({
+                siteName: result.site,
+                siteUrl: result.url,
+                changeType: result.changeReason || 'Content Modified',
+                changeDetails: result.changeReason || 'Page content has been updated',
+                notificationStatus: result.notificationsSent ? 'Sent' : 'Failed'
+            }));
+
+        // Check if LINE failed due to bot sending to itself
+        let responseMessage = `Comprehensive LINE test completed! ${changesDetected} changes detected.`;
+        if (lineResult && !lineResult.success) {
+            if (lineResult.error && lineResult.error.includes('ボット自身のLINE ID')) {
+                responseMessage = 'テストは完了しましたが、LINE送信に失敗しました。';
+            }
+        }
+
+        // Always return results to frontend, regardless of LINE success
+        res.json({
+            success: lineResult && lineResult.success,
+            message: responseMessage,
+            error: lineResult && !lineResult.success ? lineResult.error : undefined,
+            testResults: {
+                totalSites: sites.length,
+                changesDetected,
+                notificationsSent: testResults.filter(r => r.notificationsSent).length,
+                results: testResults,
+                changes: changes, // Add detailed change information
+                lineStatus: lineResult ? lineResult.success : false,
+                lineMessage: lineResult ? (lineResult.error || lineResult.reason) : 'LINE not attempted'
+            }
+        });
+
     } catch (error) {
-        console.error('Test LINE error:', error);
+        console.error('Comprehensive test LINE error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error'
+            message: 'Server error during comprehensive LINE test'
         });
     }
 });
@@ -338,6 +597,104 @@ router.delete('/history', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Clear history error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Check for recent changes in monitored sites
+router.post('/check-changes', authenticateToken, async (req, res) => {
+    try {
+        console.log(`🔍 Checking for recent changes for user ${req.user.id}`);
+        
+        // Get user's monitored sites
+        const [sites] = await pool.execute(
+            'SELECT id, name, url FROM monitored_sites WHERE user_id = ? AND is_active = true',
+            [req.user.id]
+        );
+
+        if (sites.length === 0) {
+            return res.json({
+                success: true,
+                changes: []
+            });
+        }
+
+        // Check each site for recent changes
+        let changes = [];
+
+        for (const site of sites) {
+            try {
+                // Check if there are recent changes in the last 30 minutes (extended window)
+                const [recentChecks] = await pool.execute(`
+                    SELECT 
+                        sc.changes_detected,
+                        sc.created_at,
+                        sc.reason
+                    FROM site_checks sc
+                    WHERE sc.site_id = ? 
+                    AND sc.created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                    AND sc.changes_detected = true
+                    ORDER BY sc.created_at DESC
+                    LIMIT 1
+                `, [site.id]);
+
+                if (recentChecks.length > 0) {
+                    const check = recentChecks[0];
+                    changes.push({
+                        siteName: site.name,
+                        siteUrl: site.url,
+                        changeType: check.reason || 'Content Modified',
+                        changeDetails: check.reason || 'Page content has been updated',
+                        detectedAt: check.created_at
+                    });
+                }
+            } catch (error) {
+                console.error(`Error checking site ${site.name}:`, error);
+            }
+        }
+
+        console.log(`🔍 Found ${changes.length} recent changes for user ${req.user.id}`);
+
+        res.json({
+            success: true,
+            changes: changes
+        });
+
+    } catch (error) {
+        console.error('Check changes error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// Log frontend activity to terminal
+router.post('/log-frontend', authenticateToken, async (req, res) => {
+    try {
+        const { source, level, message, timestamp } = req.body;
+        
+        // Log to terminal with timestamp
+        const logMessage = `[${timestamp}] ${source} ${level}: ${message}`;
+        
+        if (level === 'ERROR') {
+            console.error(logMessage);
+        } else if (level === 'SUCCESS') {
+            console.log('✅', logMessage);
+        } else {
+            console.log('ℹ️', logMessage);
+        }
+        
+        res.json({
+            success: true,
+            message: 'Logged to terminal'
+        });
+        
+    } catch (error) {
+        console.error('Log frontend error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'

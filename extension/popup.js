@@ -1,7 +1,7 @@
 // Global variables
 let currentUser = null;
 let authToken = null;
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3003/api';
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
@@ -11,6 +11,34 @@ const dashboardEl = document.getElementById('dashboard');
 // Initialize the extension
 document.addEventListener('DOMContentLoaded', async () => {
     await initializeExtension();
+    // Wire close buttons for modals without relying on inline handlers
+    document.querySelectorAll('[data-close-modal]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+            const modalId = el.getAttribute('data-close-modal');
+            if (modalId) {
+                closeModal(modalId);
+            }
+        });
+    });
+
+    // Delegate site list actions (edit/delete/manual-check)
+    const sitesList = document.getElementById('sitesList');
+    sitesList.addEventListener('click', (event) => {
+        const target = event.target.closest('button[data-action]');
+        if (!target) return;
+        const action = target.getAttribute('data-action');
+        const siteIdAttr = target.getAttribute('data-site-id');
+        const siteId = siteIdAttr ? parseInt(siteIdAttr, 10) : null;
+        if (!siteId) return;
+
+        if (action === 'edit') {
+            editSite(siteId);
+        } else if (action === 'delete') {
+            deleteSite(siteId);
+        } else if (action === 'manual-check') {
+            manualCheck(siteId);
+        }
+    });
 });
 
 // Initialize extension
@@ -27,6 +55,9 @@ async function initializeExtension() {
                 showDashboard();
                 loadSites();
                 loadNotificationPreferences();
+                
+                // Start real-time change monitoring
+                startChangeMonitoring();
             } else {
                 await clearStoredData();
                 showLoginForm();
@@ -118,8 +149,12 @@ function setupDashboard() {
         });
     });
 
-    // Add site button
+    // Add site buttons
     document.getElementById('addSiteBtn').addEventListener('click', showAddSiteModal);
+    const noSitesAddBtn = document.getElementById('noSitesAddBtn');
+    if (noSitesAddBtn) {
+        noSitesAddBtn.addEventListener('click', showAddSiteModal);
+    }
 
     // Logout button
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
@@ -255,10 +290,10 @@ function displaySites(sites) {
                     <a href="${site.url}" target="_blank" class="site-url">${site.url}</a>
                 </div>
                 <div class="site-actions">
-                    <button class="btn-icon" onclick="editSite(${site.id})" title="編集">
+                    <button class="btn-icon" data-action="edit" data-site-id="${site.id}" title="編集">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon" onclick="deleteSite(${site.id})" title="削除">
+                    <button class="btn-icon" data-action="delete" data-site-id="${site.id}" title="削除">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -271,7 +306,7 @@ function displaySites(sites) {
             </div>
             <div class="site-info">
                 <span>最終チェック: ${site.last_check ? new Date(site.last_check).toLocaleString('ja-JP') : '未チェック'}</span>
-                <button class="btn-icon" onclick="manualCheck(${site.id})" title="手動チェック">
+                <button class="btn-icon" data-action="manual-check" data-site-id="${site.id}" title="手動チェック">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
@@ -534,9 +569,164 @@ async function updateNotificationPreferences(preferences) {
     }
 }
 
-// Test email notification
+// Test email notification with comprehensive monitoring test
+// Real-time change notification function
+async function showChangeNotification(siteName, url, changeType, changeDetails) {
+    const timestamp = new Date().toLocaleString('ja-JP');
+    
+    let message = `🚨 ウェブサイト変更を検出しました！\n\n`;
+    message += `📊 サイト: ${siteName}\n`;
+    message += `🌐 URL: ${url}\n`;
+    message += `🔄 変更: ${changeType}\n`;
+    message += `🕐 検出時間: ${timestamp}\n`;
+    
+    if (changeDetails) {
+        message += `\n📝 詳細: ${changeDetails}`;
+    }
+    
+    message += `\n\n📧メール通知の送信を試行中...`;
+    
+    // Log to console for debugging
+    console.log('🚨 Change Detected:', {
+        site: siteName,
+        url: url,
+        changeType: changeType,
+        changeDetails: changeDetails,
+        timestamp: timestamp
+    });
+    
+    // Log to terminal immediately
+    logToTerminal('FRONTEND', 'SUCCESS', `Change detected for ${siteName}: ${changeType}`);
+    
+    // Show the change notification immediately
+    console.log('🔔 Attempting to show notification in extension...');
+    showNotification(message, 'warning');
+    
+    // Verify notification was displayed
+    setTimeout(() => {
+        const notificationEl = document.getElementById('notification');
+        if (notificationEl && notificationEl.style.display !== 'none') {
+            console.log('✅ Notification successfully displayed in extension');
+            // Log success to backend for terminal visibility
+            logToTerminal('FRONTEND', 'SUCCESS', `Change notification displayed for ${siteName}`);
+        } else {
+            console.log('❌ Notification failed to display in extension');
+            console.log('Notification element:', notificationEl);
+            console.log('Display style:', notificationEl ? notificationEl.style.display : 'element not found');
+            // Log failure to backend for terminal visibility
+            logToTerminal('FRONTEND', 'ERROR', `Failed to display notification for ${siteName}`);
+        }
+    }, 100);
+    
+    return message;
+}
+
+// Log frontend activity to terminal via backend
+async function logToTerminal(source, level, message) {
+    try {
+        console.log(`🔔 [${source}] ${level}: ${message}`);
+        
+        // Only try to log to backend if we have a valid auth token
+        if (authToken && authToken !== 'null' && authToken !== 'undefined') {
+            const response = await fetch(`${API_BASE_URL}/notifications/log-frontend`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    source: source,
+                    level: level,
+                    message: message,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            
+            if (response.ok) {
+                console.log('✅ Frontend activity logged to terminal');
+            } else {
+                console.log('❌ Failed to log to terminal:', response.status);
+            }
+        } else {
+            console.log('⚠️ No auth token, skipping terminal log');
+        }
+    } catch (error) {
+        console.log('❌ Failed to log to terminal:', error);
+    }
+}
+
+// Start real-time change monitoring
+async function startChangeMonitoring() {
+    try {
+        console.log('🔍 Starting real-time change monitoring...');
+        
+        // Check for changes every 15 seconds (more frequent)
+        setInterval(async () => {
+            await checkForChanges();
+        }, 15000);
+        
+        // Initial check
+        await checkForChanges();
+        
+        console.log('✅ Real-time monitoring started successfully');
+        logToTerminal('FRONTEND', 'SUCCESS', 'Real-time change monitoring started');
+        
+    } catch (error) {
+        console.error('❌ Error starting change monitoring:', error);
+        logToTerminal('FRONTEND', 'ERROR', `Failed to start monitoring: ${error.message}`);
+    }
+}
+
+// Check for changes in monitored sites
+async function checkForChanges() {
+    try {
+        console.log('🔍 Checking for recent changes...');
+        
+        const response = await fetch(`${API_BASE_URL}/notifications/check-changes`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.success && data.changes && data.changes.length > 0) {
+                console.log('🚨 Real-time changes detected:', data.changes);
+                
+                // Log to terminal for debugging
+                logToTerminal('FRONTEND', 'SUCCESS', `Found ${data.changes.length} recent changes`);
+                
+                // Show each change notification IMMEDIATELY
+                data.changes.forEach((change, index) => {
+                    console.log(`🔔 Showing notification for change ${index + 1}:`, change);
+                    showChangeNotification(
+                        change.siteName,
+                        change.siteUrl,
+                        change.changeType,
+                        change.changeDetails
+                    );
+                });
+            } else {
+                console.log('✅ No recent changes detected');
+                logToTerminal('FRONTEND', 'INFO', 'No recent changes found');
+            }
+        } else {
+            console.error('❌ Failed to check for changes:', response.status);
+            logToTerminal('FRONTEND', 'ERROR', `Failed to check changes: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ Error checking for changes:', error);
+        logToTerminal('FRONTEND', 'ERROR', `Error checking changes: ${error.message}`);
+    }
+}
+
 async function testEmailNotification() {
     try {
+        // Show loading state
+        showNotification(' 包括的なシステムテストを開始します...', 'info');
+        
         const response = await fetch(`${API_BASE_URL}/notifications/test-email`, {
             method: 'POST',
             headers: {
@@ -547,19 +737,73 @@ async function testEmailNotification() {
         const data = await response.json();
 
         if (data.success) {
-            showNotification('テストメールを送信しました', 'success');
+            const results = data.testResults;
+            
+            // Show change notifications FIRST if changes detected
+            if (results.changesDetected > 0 && results.changes && results.changes.length > 0) {
+                console.log('🚨 Changes detected, showing notifications:', results.changes);
+                
+                // Show each change notification IMMEDIATELY
+                results.changes.forEach((change, index) => {
+                    console.log(`🔔 Showing notification ${index + 1} for change:`, change);
+                    showChangeNotification(
+                        change.siteName || 'Unknown Site',
+                        change.siteUrl || 'Unknown URL',
+                        change.changeType || 'Content Modified',
+                        change.changeDetails || 'Page content has been updated'
+                    );
+                });
+                
+                // Show summary after all change notifications
+                setTimeout(() => {
+                    let summaryMessage = `📊 変更検出の概要:\n`;
+                    // summaryMessage += `   🔄 変更総数: ${results.changesDetected}\n`;
+                    summaryMessage += `   📧 メールステータス: ${results.emailStatus ? '送信済み' : 'ブロック済み'}\n`;
+                    summaryMessage += `   ⏰ 詳細はメールをご確認ください`;
+                    
+                    showNotification(summaryMessage, 'info');
+                }, (results.changes.length + 1) * 2000);
+                
+            } else {
+                // No changes detected - show comprehensive results
+                let message = `✅ 総合テスト完了！\n`;
+                message += `📊 テスト済みサイト: ${results.totalSites}\n`;
+                // message += `🔄 Changes detected: ${results.changesDetected}\n`;
+                // message += `📧 Email Status: ${results.emailStatus ? 'Attempted' : 'Blocked'}`;
+                
+                if (results.emailMessage) {
+                    // message += `\n📝 Email Note: ${results.emailMessage}`;
+                }
+                
+                showNotification(message, 'success');
+                
+                setTimeout(() => {
+                    showNotification('監視対象のウェブサイトはすべて最新です。変更は検出されませんでした。', '成功');
+                }, 3000);
+            }
+            
+            // Log detailed results to console for debugging
+            console.log('🧪 Comprehensive Test Results:', results);
+            
         } else {
-            showNotification(data.message || 'テストメールの送信に失敗しました', 'error');
+            showNotification(data.message || 'Comprehensive test failed', 'error');
         }
     } catch (error) {
-        console.error('Test email error:', error);
-        showNotification('テストメールの送信に失敗しました', 'error');
+        console.error('Comprehensive test error:', error);
+        showNotification('Comprehensive test failed due to network error', 'error');
     }
 }
 
-// Test LINE notification
+// Test LINE notification with comprehensive monitoring
 async function testLineNotification() {
+    const testLineBtn = document.getElementById('testLineBtn');
+    const originalText = testLineBtn.innerHTML;
+    
     try {
+        // Show loading state
+        testLineBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> テスト中...';
+        testLineBtn.disabled = true;
+
         const response = await fetch(`${API_BASE_URL}/notifications/test-line`, {
             method: 'POST',
             headers: {
@@ -570,13 +814,43 @@ async function testLineNotification() {
         const data = await response.json();
 
         if (data.success) {
-            showNotification('テストLINEメッセージを送信しました', 'success');
+            // Show comprehensive results
+            const results = data.testResults;
+            let message = `LINEテスト完了！\n\n`;
+            message += `📊 テスト結果:\n`;
+            message += `• 監視サイト数: ${results.totalSites}\n`;
+            message += `• 変更検出: ${results.changesDetected}件\n`;
+            message += `• 通知送信: ${results.notificationsSent}件\n`;
+            message += `• LINE送信: ${results.lineStatus ? '✅ 成功' : '❌ 失敗'}\n\n`;
+            
+            if (results.changes && results.changes.length > 0) {
+                message += `🔍 検出された変更:\n`;
+                results.changes.forEach(change => {
+                    message += `• ${change.siteName}: ${change.changeType}\n`;
+                });
+            } else {
+                message += `✅ すべてのサイトで変更は検出されませんでした`;
+            }
+
+            showNotification(message, 'success');
+            
+            // Show detailed results in console for debugging
+            console.log('📱 LINE Test Results:', results);
         } else {
-            showNotification(data.message || 'テストLINEメッセージの送信に失敗しました', 'error');
+            // Handle specific errors
+            if (data.error && data.error.includes('ボット自身のLINE ID')) {
+                showNotification('エラー: ボット自身のLINE IDが設定されています。\n\n正しいユーザーのLINE IDを設定してください。\nLINE IDは、LINEアプリの「設定」→「プロフィール」→「ID」で確認できます。', 'error');
+            } else {
+                showNotification(data.error || data.message || 'LINEテストに失敗しました', 'error');
+            }
         }
     } catch (error) {
         console.error('Test LINE error:', error);
-        showNotification('テストLINEメッセージの送信に失敗しました', 'error');
+        showNotification('LINEテストの実行に失敗しました', 'error');
+    } finally {
+        // Restore button state
+        testLineBtn.innerHTML = originalText;
+        testLineBtn.disabled = false;
     }
 }
 
@@ -727,36 +1001,55 @@ function closeModal(modalId) {
 }
 
 function showNotification(message, type = 'info') {
-    const notification = document.getElementById('notification');
-    const icon = document.getElementById('notificationIcon');
-    const messageEl = document.getElementById('notificationMessage');
+    try {
+        const notification = document.getElementById('notification');
+        const icon = document.getElementById('notificationIcon');
+        const messageEl = document.getElementById('notificationMessage');
 
-    // Set icon based on type
-    switch (type) {
-        case 'success':
-            icon.className = 'fas fa-check-circle';
-            notification.className = 'notification success';
-            break;
-        case 'error':
-            icon.className = 'fas fa-exclamation-circle';
-            notification.className = 'notification error';
-            break;
-        case 'warning':
-            icon.className = 'fas fa-exclamation-triangle';
-            notification.className = 'notification warning';
-            break;
-        default:
-            icon.className = 'fas fa-info-circle';
-            notification.className = 'notification';
+        if (!notification || !icon || !messageEl) {
+            console.error('❌ Notification elements not found:', {
+                notification: !!notification,
+                icon: !!icon,
+                messageEl: !!messageEl
+            });
+            return;
+        }
+
+        // Set icon based on type
+        switch (type) {
+            case 'success':
+                icon.className = 'fas fa-check-circle';
+                notification.className = 'notification success';
+                break;
+            case 'error':
+                icon.className = 'fas fa-exclamation-circle';
+                notification.className = 'notification error';
+                break;
+            case 'warning':
+                icon.className = 'fas fa-exclamation-triangle';
+                notification.className = 'notification warning';
+                break;
+            default:
+                icon.className = 'fas fa-info-circle';
+                notification.className = 'notification';
+        }
+
+        messageEl.textContent = message;
+        notification.style.display = 'block';
+        
+        console.log(`🔔 Notification displayed: ${type} - ${message.substring(0, 50)}...`);
+
+        // Auto hide after 5 seconds (increased from 3)
+        setTimeout(() => {
+            if (notification) {
+                notification.style.display = 'none';
+                console.log('🔔 Notification auto-hidden');
+            }
+        }, 5000);
+        
+    } catch (error) {
+        console.error('❌ Error showing notification:', error);
     }
-
-    messageEl.textContent = message;
-    notification.style.display = 'block';
-
-    // Auto hide after 3 seconds
-    setTimeout(() => {
-        notification.style.display = 'none';
-    }, 3000);
 }
 
 // Global functions for onclick handlers

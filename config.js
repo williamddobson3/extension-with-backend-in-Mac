@@ -1,0 +1,33 @@
+// Configuration file for Website Monitor
+// Copy this to .env file or set as environment variables
+
+module.exports = {
+    // Database Configuration
+    DB_HOST: 'localhost',
+    DB_USER: 'root',
+    DB_PASSWORD: '',
+    DB_NAME: 'website_monitor',
+    DB_PORT: 3306,
+
+    // Server Configuration
+    PORT: 3003,
+    NODE_ENV: 'development',
+
+    // JWT Secret
+    JWT_SECRET: 'secret',
+
+    // Email Configuration (Gmail) - Updated with new credentials
+    EMAIL_HOST: 'smtp.gmail.com',  // Gmail SMTP hostname
+    EMAIL_PORT: 465,                // SSL port
+    EMAIL_USER: 'KM@sabosuku.com',
+    EMAIL_PASS: 'hzpw wojd xszu ladn', // App password
+
+    // LINE Messaging API
+    LINE_CHANNEL_ID: '2008063758',
+    LINE_CHANNEL_ACCESS_TOKEN: '3ZR5PnTnCwRboI12SFPe9MPrkPsliNuUToFi091eyGslZ+W+Pg3sXE9Q+ZmfAosJ1qL0Kev9tXBIGYa7EJIJa2drgVjSOM7lv98K33R67QK6Hr43g6llGOx8ShJ2Afhotnh4QJDnN+b/MCKhMQB0bgdB04t89/1O/w1cDnyilFU=',
+    LINE_CHANNEL_SECRET: '4fee6b1dafa8a2055c493481e53f7c1b',
+
+    // Rate Limiting
+    RATE_LIMIT_WINDOW_MS: 900000,
+    RATE_LIMIT_MAX_REQUESTS: 100
+};
