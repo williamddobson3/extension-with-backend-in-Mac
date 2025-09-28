@@ -453,6 +453,7 @@ input:checked + .slider:before {
     padding: 20px;
 }
 
+
 /* Modal styles */
 .modal {
     position: fixed;

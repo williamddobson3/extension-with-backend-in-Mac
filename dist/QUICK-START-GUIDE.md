@@ -99,7 +99,7 @@ EMAIL_PASS=your_app_password
 - Verify MySQL is accessible
 
 ### "Port Already in Use"
-- Change the port in your .env file (e.g., from 3003 to 3004)
+- Change the port in your .env file (e.g., from 3000 to 3000)
 
 ### Extension Not Loading
 - Make sure you enabled Developer mode

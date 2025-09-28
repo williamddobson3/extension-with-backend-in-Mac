@@ -16,7 +16,7 @@ DB_NAME=website_monitor
 DB_PORT=3306
 
 # Server Configuration
-PORT=3003
+PORT=3000
 NODE_ENV=development
 
 # JWT Secret

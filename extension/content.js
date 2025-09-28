@@ -2,55 +2,6 @@
 
 // Inject a button to quickly add the current page to monitoring
 function injectQuickAddButton() {
-    // Check if button already exists
-    if (document.getElementById('website-monitor-quick-add')) {
-        return;
-    }
-
-    // Create button
-    const button = document.createElement('div');
-    button.id = 'website-monitor-quick-add';
-    button.innerHTML = `
-        <div class="wm-quick-add-btn" title="このページを監視に追加">
-            <i class="fas fa-eye"></i>
-        </div>
-    `;
-
-    // Add styles
-    const style = document.createElement('style');
-    style.textContent = `
-        #website-monitor-quick-add {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        .wm-quick-add-btn {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
-            transition: all 0.3s ease;
-            font-size: 18px;
-        }
-        
-        .wm-quick-add-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(0,123,255,0.4);
-        }
-        
-        .wm-quick-add-btn:active {
-            transform: scale(0.95);
-        }
-    `;
 
     // Add Font Awesome if not present
     if (!document.querySelector('link[href*="font-awesome"]')) {
@@ -126,7 +77,6 @@ function getPageDescription() {
 
     return '';
 }
-
 // Show quick add message
 function showQuickAddMessage(message, type = 'info') {
     // Remove existing message
@@ -229,3 +179,4 @@ new MutationObserver(() => {
         setTimeout(injectQuickAddButton, 1000); // Wait for page to load
     }
 }).observe(document, { subtree: true, childList: true });
+

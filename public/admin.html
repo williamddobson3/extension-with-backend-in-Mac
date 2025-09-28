@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ウェブサイトモニターユーザー管理</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        /* Main content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 8px 12px 8px 36px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Button styles */
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .btn-icon:hover {
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        /* Users table */
+        .users-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .users-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .users-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .users-count {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 16.8px; /* 14px * 1.2 */
+        }
+
+        .users-table th {
+            background: #f8f9fa;
+            padding: 16px 12px;
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .users-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .users-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .users-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* User info cells */
+        .user-info-cell {
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 16.8px; /* 14px * 1.2 */
+            margin-bottom: 2px;
+        }
+
+        .user-email {
+            color: #666;
+            font-size: 14.4px; /* 12px * 1.2 */
+            margin-bottom: 2px;
+        }
+
+        /* Status cells */
+        .status-cell {
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 13.2px; /* 11px * 1.2 */
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-badge.admin {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        /* Meta cells */
+        .meta-cell {
+            text-align: center;
+            min-width: 80px;
+            color: #666;
+        }
+
+        .date-cell {
+            min-width: 120px;
+            color: #666;
+        }
+
+        .line-cell {
+            min-width: 150px;
+            color: #666;
+            font-family: monospace;
+            font-size: 14.4px; /* 12px * 1.2 */
+        }
+
+        /* Action cells */
+        .actions-cell {
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            color: #666;
+            transition: all 0.3s ease;
+            font-size: 16.8px; /* 14px * 1.2 */
+        }
+
+        .btn-icon:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .btn-icon.danger:hover {
+            background: #f8d7da;
+            color: #dc3545;
+        }
+
+        /* Sortable headers */
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        .sortable:hover {
+            background: #e9ecef;
+        }
+
+        .sortable::after {
+            content: '↕';
+            position: absolute;
+            right: 8px;
+            opacity: 0.5;
+            font-size: 12px;
+        }
+
+        .sortable.asc::after {
+            content: '↑';
+            opacity: 1;
+        }
+
+        .sortable.desc::after {
+            content: '↓';
+            opacity: 1;
+        }
+
+        /* Responsive table */
+        @media (max-width: 1200px) {
+            .users-table {
+                font-size: 15.6px; /* 13px * 1.2 */
+            }
+            
+            .users-table th,
+            .users-table td {
+                padding: 12px 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .users-table th,
+            .users-table td {
+                padding: 8px 6px;
+                font-size: 14.4px; /* 12px * 1.2 */
+            }
+            
+            .user-name {
+                font-size: 15.6px; /* 13px * 1.2 */
+            }
+            
+            .user-email {
+                font-size: 13.2px; /* 11px * 1.2 */
+            }
+        }
+
+        /* Loading and empty states */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e3e3e3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-users {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-users i {
+            font-size: 48px;
+            color: #ddd;
+            margin-bottom: 16px;
+        }
+
+        .no-users h3 {
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            min-width: 300px;
+            max-width: 400px;
+        }
+
+        .notification.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .notification.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .notification.warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .user-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .user-actions {
+                align-self: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-globe"></i> ウェブサイトモニターユーザー管理</h1>
+            <div class="header-actions">
+                <div class="user-info">
+                    <i class="fas fa-user-shield"></i>
+                    <span id="adminName">管理者</span>
+                </div>
+                <button id="logoutBtn" class="btn btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i> ログアウト
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h2 class="page-title"><i class="fas fa-users"></i> ユーザー管理</h2>
+            <div class="admin-actions">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="ユーザーを検索..." class="search-input">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button id="refreshUsersBtn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> リフレッシュ
+                </button>
+            </div>
+        </div>
+
+        <!-- Users Container -->
+        <div class="users-container">
+            <div class="users-header">
+                <h3 class="users-title">登録ユーザー</h3>
+                <span class="users-count" id="usersCount">ユーザー</span>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="loading" class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>ユーザーを読み込み中...</p>
+            </div>
+
+            <!-- Users Table -->
+            <div class="table-container">
+                <table id="usersTable" class="users-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="username"><i class="fas fa-user"></i> ユーザー</th>
+                            
+                            <th class="sortable" data-sort="sites"><i class="fas fa-globe"></i> サイト</th>
+                            <th class="sortable" data-sort="created"><i class="fas fa-calendar"></i> 登録</th>
+                            <th><i class="fab fa-line"></i> LINE ID</th>
+                            <th><i class="fas fa-cog"></i> アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- No Users State -->
+            <div id="noUsers" class="no-users" style="display: none;">
+                <i class="fas fa-users"></i>
+                <h3>ユーザーが見つかりませんでした</h3>
+                <p>表示する登録ユーザーがいません</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification" style="display: none;">
+        <i id="notificationIcon" class="fas fa-info-circle"></i>
+        <span id="notificationMessage"></span>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let authToken = null;
+        let users = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        const API_BASE_URL = window.location.origin + '/api';
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializePage();
+        });
+
+        // Initialize page
+        async function initializePage() {
+            try {
+                // Get token from URL parameters or localStorage
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || localStorage.getItem('adminToken');
+                
+                if (!token) {
+                    showNotification('Access token required. Please login from the extension.', 'error');
+                    return;
+                }
+
+                authToken = token;
+                localStorage.setItem('adminToken', token);
+
+                // Verify token and get user info
+                const isValid = await verifyToken(authToken);
+                if (!isValid) {
+                    showNotification('Invalid or expired token. Please login again.', 'error');
+                    localStorage.removeItem('adminToken');
+                    return;
+                }
+
+                currentUser = await getCurrentUser();
+                if (!currentUser || !currentUser.is_admin) {
+                    showNotification('Admin access required.', 'error');
+                    return;
+                }
+
+                // Update UI
+                document.getElementById('adminName').textContent = currentUser.username;
+                
+                // Load users
+                await loadUsers();
+
+                // Setup event listeners
+                setupEventListeners();
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showNotification('Failed to initialize page', 'error');
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Refresh button
+            document.getElementById('refreshUsersBtn').addEventListener('click', loadUsers);
+            
+            // Logout button
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            
+            // Table sorting
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.getAttribute('data-sort');
+                    sortTable(column);
+                });
+            });
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                filterUsers(e.target.value);
+            });
+        }
+
+        // Sort table
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+
+            // Update sort indicators
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.classList.remove('asc', 'desc');
+                if (header.getAttribute('data-sort') === column) {
+                    header.classList.add(sortDirection);
+                }
+            });
+
+            // Sort users array
+            users.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch (column) {
+                    case 'username':
+                        aVal = a.username.toLowerCase();
+                        bVal = b.username.toLowerCase();
+                        break;
+                    case 'sites':
+                        aVal = a.site_count;
+                        bVal = b.site_count;
+                        break;
+                    case 'created':
+                        aVal = new Date(a.created_at);
+                        bVal = new Date(b.created_at);
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Re-render table
+            displayUsers(users);
+        }
+
+        // Filter users
+        function filterUsers(searchTerm) {
+            if (!searchTerm.trim()) {
+                displayUsers(users);
+                return;
+            }
+
+            const filteredUsers = users.filter(user => {
+                const searchLower = searchTerm.toLowerCase();
+                return (
+                    user.username.toLowerCase().includes(searchLower) ||
+                    user.email.toLowerCase().includes(searchLower) ||
+                    user.id.toString().includes(searchLower) ||
+                    (user.line_user_id && user.line_user_id.toLowerCase().includes(searchLower))
+                );
+            });
+
+            displayUsers(filteredUsers);
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    users = data.users;
+                    displayUsers(users);
+                } else {
+                    showNotification('Failed to load users: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Load users error:', error);
+                showNotification('Failed to load users', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display users
+        function displayUsers(usersToDisplay = users) {
+            const usersTable = document.getElementById('usersTable');
+            const usersTableBody = document.getElementById('usersTableBody');
+            const noUsers = document.getElementById('noUsers');
+            const usersCount = document.getElementById('usersCount');
+
+            // Update count
+            usersCount.textContent = `${usersToDisplay.length} user${usersToDisplay.length !== 1 ? 's' : ''}`;
+
+            if (usersToDisplay.length === 0) {
+                usersTable.style.display = 'none';
+                noUsers.style.display = 'block';
+                return;
+            }
+
+            usersTable.style.display = 'table';
+            noUsers.style.display = 'none';
+
+            usersTableBody.innerHTML = usersToDisplay.map(user => `
+                <tr>
+                    <td class="user-info-cell">
+                        <div class="user-name">${user.username}</div>
+                        <div class="user-email">${user.email}</div>
+                    </td>
+                    <td class="meta-cell">
+                        <i class="fas fa-globe"></i> ${user.site_count}
+                    </td>
+                    <td class="date-cell">
+                        ${new Date(user.created_at).toLocaleDateString('ja-JP')}
+                    </td>
+                    <td class="line-cell">
+                        ${user.line_user_id || ''}
+                    </td>
+                    <td class="actions-cell">
+                        ${!user.is_admin ? `
+                            <div class="action-buttons">
+                                <button class="btn-icon danger" 
+                                        data-action="delete-user" 
+                                        data-user-id="${user.id}" 
+                                        title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        ` : '<span style="color: #999; font-size: 12px;">管理者</span>'}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Add event listeners for user actions
+            usersTableBody.addEventListener('click', (event) => {
+                const target = event.target.closest('button[data-action]');
+                if (!target) return;
+                
+                const action = target.getAttribute('data-action');
+                const userId = parseInt(target.getAttribute('data-user-id'));
+
+                if (action === 'delete-user') {
+                    deleteUser(userId);
+                }
+            });
+        }
+
+
+        // Delete user
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('ユーザーが正常に削除されました', 'success');
+                    loadUsers(); // Refresh the list
+                } else {
+                    showNotification(data.message || 'ユーザーを削除できませんでした', 'error');
+                }
+            } catch (error) {
+                console.error('Delete user error:', error);
+                showNotification('ユーザーを削除できませんでした', 'error');
+            }
+        }
+
+        // Show/hide loading state
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            const usersTable = document.getElementById('usersTable');
+            const noUsers = document.getElementById('noUsers');
+            
+            if (show) {
+                loading.style.display = 'flex';
+                usersTable.style.display = 'none';
+                noUsers.style.display = 'none';
+            } else {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Handle logout
+        function handleLogout() {
+            localStorage.removeItem('adminToken');
+            window.close();
+        }
+
+        // Verify token
+        async function verifyToken(token) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                return data.success;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        // Get current user
+        async function getCurrentUser() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                return data.success ? data.user : null;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const messageEl = document.getElementById('notificationMessage');
+
+            // Set icon based on type
+            switch (type) {
+                case 'success':
+                    icon.className = 'fas fa-check-circle';
+                    notification.className = 'notification success';
+                    break;
+                case 'error':
+                    icon.className = 'fas fa-exclamation-circle';
+                    notification.className = 'notification error';
+                    break;
+                case 'warning':
+                    icon.className = 'fas fa-exclamation-triangle';
+                    notification.className = 'notification warning';
+                    break;
+                default:
+                    icon.className = 'fas fa-info-circle';
+                    notification.className = 'notification';
+            }
+
+            messageEl.textContent = message;
+            notification.style.display = 'flex';
+
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

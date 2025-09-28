@@ -1,7 +1,7 @@
 // Global variables
 let currentUser = null;
 let authToken = null;
-const API_BASE_URL = 'http://localhost:3003/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // DOM elements
 const loadingEl = document.getElementById('loading');

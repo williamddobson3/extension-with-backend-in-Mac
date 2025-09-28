@@ -4,12 +4,20 @@ require('dotenv').config();
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password:  '',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'website_monitor',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    // Production SSL configuration
+    ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false
+    } : false,
+    // Connection timeout settings
+    connectTimeout: 60000,
+    acquireTimeout: 60000,
+    timeout: 60000
 };
 
 const pool = mysql.createPool(dbConfig);

@@ -35,7 +35,7 @@ EMAIL_USER=yuriilukianets9@gmail.com
 EMAIL_PASS=daao qrql rxng xyjx
 
 # Admin notifications
-ADMIN_EMAIL=admin@example.com
+ADMIN_EMAIL=KM@sabosuku.com
 ADMIN_NOTIFICATIONS_ENABLED=true
 ```
 

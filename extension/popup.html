@@ -48,16 +48,24 @@
             <div id="register-tab" class="tab-content">
                 <form id="registerForm" class="form">
                     <div class="form-group">
-                        <label for="registerUsername">ユーザー名</label>
-                        <input type="text" id="registerUsername" required>
+                        <label for="registerUserId">ユーザーID</label>
+                        <input type="text" id="registerUserId" required placeholder="例: user123">
                     </div>
                     <div class="form-group">
                         <label for="registerEmail">メールアドレス</label>
-                        <input type="email" id="registerEmail" required>
+                        <input type="email" id="registerEmail" required placeholder="例: user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerLineId">LINE ID</label>
+                        <input type="text" id="registerLineId" placeholder="例: line_user_id (オプション)">
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">パスワード</label>
-                        <input type="password" id="registerPassword" required minlength="6">
+                        <input type="password" id="registerPassword" required minlength="6" placeholder="6文字以上">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerConfirmPassword">パスワード確認</label>
+                        <input type="password" id="registerConfirmPassword" required minlength="6" placeholder="パスワードを再入力">
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-user-plus"></i> 登録
@@ -96,6 +104,9 @@
                 </button>
                 <button class="nav-tab" data-tab="profile">
                     <i class="fas fa-user"></i> プロフィール
+                </button>
+                <button class="nav-tab admin-tab" id="managementBtn" style="display: none;">
+                    <i class="fas fa-cog"></i> 管理
                 </button>
             </div>
 
@@ -193,6 +204,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
 
         <!-- Add Site Modal -->

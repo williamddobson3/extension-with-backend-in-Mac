@@ -238,7 +238,7 @@ class AdminNotificationService {
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <div style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white; padding: 20px; text-align: center;">
-                            <h1 style="margin: 0;">🌐 Website Monitor</h1>
+                            <h1 style="margin: 0;">🌐 ウェブサイトモニター</h1>
                             <p style="margin: 10px 0 0 0;">Admin Notification Test</p>
                         </div>
                         

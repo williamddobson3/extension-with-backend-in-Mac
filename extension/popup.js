@@ -1,7 +1,7 @@
 // Global variables
 let currentUser = null;
 let authToken = null;
-const API_BASE_URL = 'http://localhost:3003/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
@@ -125,6 +125,11 @@ function setupDashboard() {
     // Update username
     if (currentUser) {
         document.getElementById('username').textContent = currentUser.username;
+        
+        // Show admin tab if user is admin
+        if (currentUser.is_admin) {
+            document.querySelector('.admin-tab').style.display = 'flex';
+        }
     }
 
     // Navigation tabs
@@ -164,6 +169,9 @@ function setupDashboard() {
 
     // Profile forms
     setupProfileForms();
+    
+    // Admin functionality
+    setupAdminFunctions();
 }
 
 // Handle login
@@ -205,9 +213,34 @@ async function handleLogin(event) {
 async function handleRegister(event) {
     event.preventDefault();
     
-    const username = document.getElementById('registerUsername').value;
-    const email = document.getElementById('registerEmail').value;
+    const userId = document.getElementById('registerUserId').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const lineId = document.getElementById('registerLineId').value.trim();
     const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('registerConfirmPassword').value;
+
+    // Validation
+    if (!userId || !email || !password || !confirmPassword) {
+        showNotification('すべての必須フィールドを入力してください', 'error');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showNotification('パスワードが一致しません', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        showNotification('パスワードは6文字以上で入力してください', 'error');
+        return;
+    }
+
+    // Validate user ID format (alphanumeric and underscores only)
+    const userIdRegex = /^[a-zA-Z0-9_]+$/;
+    if (!userIdRegex.test(userId)) {
+        showNotification('ユーザーIDは英数字とアンダースコアのみ使用できます', 'error');
+        return;
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -215,7 +248,12 @@ async function handleRegister(event) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ username, email, password })
+            body: JSON.stringify({ 
+                username: userId, // Send as username to backend for compatibility
+                email, 
+                password,
+                line_user_id: lineId || null
+            })
         });
 
         const data = await response.json();
@@ -1052,6 +1090,44 @@ function showNotification(message, type = 'info') {
     }
 }
 
+// Admin functions
+function setupAdminFunctions() {
+    // Management button - open new window
+    const managementBtn = document.getElementById('managementBtn');
+    if (managementBtn) {
+        managementBtn.addEventListener('click', () => {
+            if (currentUser && currentUser.is_admin) {
+                openManagementWindow();
+            }
+        });
+    }
+}
+
+// Open management window
+function openManagementWindow() {
+    try {
+        // Create URL with token parameter
+        const managementUrl = `http://localhost:3000/admin?token=${encodeURIComponent(authToken)}`;
+        
+        // Open new window
+        const newWindow = window.open(managementUrl, 'userManagement', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        
+        if (!newWindow) {
+            showNotification('ポップアップブロッカーが有効になっています。管理画面を開くには、ポップアップを許可してください。', 'error');
+            return;
+        }
+        
+        // Focus the new window
+        newWindow.focus();
+        
+    } catch (error) {
+        console.error('Error opening management window:', error);
+        showNotification('管理画面を開くことができませんでした', 'error');
+    }
+}
+
+
 // Global functions for onclick handlers
 window.showAddSiteModal = showAddSiteModal;
 window.closeModal = closeModal;
+

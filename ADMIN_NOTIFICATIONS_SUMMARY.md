@@ -29,7 +29,7 @@ Your website monitoring service now includes a comprehensive admin notification 
 ### **Environment Variables**
 ```bash
 # Admin Notifications - Site management alerts
-ADMIN_EMAIL=admin@example.com          # Change this to your desired email
+ADMIN_EMAIL=KM@sabosuku.com          # Change this to your desired email
 ADMIN_NOTIFICATIONS_ENABLED=true       # Enable/disable the system
 ```
 

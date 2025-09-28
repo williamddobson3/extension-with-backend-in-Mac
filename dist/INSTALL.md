@@ -52,7 +52,7 @@ DB_NAME=website_monitor
 DB_PORT=3306
 
 # Server Configuration
-PORT=3003
+PORT=3000
 NODE_ENV=development
 
 # JWT Secret (change this!)
@@ -93,9 +93,9 @@ npm start
 
 You should see:
 ```
-🚀 Server running on port 3003
+🚀 Server running on port 3000
 📊 Environment: development
-🔗 Health check: http://localhost:3003/health
+🔗 Health check: http://localhost:3000/health
 ✅ Database connected successfully
 🚀 Starting website monitoring scheduler...
 ✅ Scheduler started successfully
@@ -135,9 +135,9 @@ mysql -u root -p
 ### Port Already in Use
 
 ```bash
-# Check what's using port 3003
-lsof -i :3003  # macOS/Linux
-netstat -ano | findstr :3003 # Windows
+# Check what's using port 3000
+lsof -i :3000  # macOS/Linux
+netstat -ano | findstr :3000 # Windows
 
 # Kill the process or change port in .env
 ```

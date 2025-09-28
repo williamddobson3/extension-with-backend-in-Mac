@@ -230,7 +230,7 @@ router.post('/test-email', authenticateToken, async (req, res) => {
                     
                     if (changeResult.hasChanged) {
                         changesDetected++;
-                        console.log(`🔄 Changes detected on ${site.name}: ${changeResult.reason}`);
+                        console.log(`🔄 ${site.name}で変更が検出されました: ${changeResult.reason}`);
                         
                         // 3. Send real notifications about the changes
                         const notificationResult = await bulkNotificationService.notifySiteChange(site.id, changeResult);
@@ -246,13 +246,13 @@ router.post('/test-email', authenticateToken, async (req, res) => {
                         });
                         
                     } else {
-                        console.log(`✅ No changes detected on ${site.name}`);
+                        console.log(`✅ ${site.name}で変更は検出されませんでした`);
                         testResults.push({
                             site: site.name,
                             url: site.url,
                             status: 'success',
                             changesDetected: false,
-                            changeReason: 'No changes detected',
+                            changeReason: '変更は検出されませんでした',
                             notificationsSent: false
                         });
                     }
@@ -285,47 +285,23 @@ router.post('/test-email', authenticateToken, async (req, res) => {
             }
         }
 
-        // Create comprehensive test summary
-        const testMessage = `🧪 Website Monitoring System Test Results
+        // Create simple test summary
+        const testMessage = `ウェブサイト監視テスト結果<br/>
+テスト完了: ${new Date().toLocaleString('ja-JP')}<br/>
+テスト対象サイト数: ${sites.length}<br/>
+変更検出数: ${changesDetected}<br/>
+通知送信数: ${testResults.filter(r => r.notificationsSent).length}<br/>
+<br/>
+${changesDetected > 0 ? '変更が検出され、通知が送信されました。' : '変更は検出されませんでした。'}`;
 
-🌐 Service: Website Monitor
-📧 Type: Comprehensive System Test
-🕐 Test Completed: ${new Date().toLocaleString('ja-JP')}
-
-📊 Test Summary:
-• Total Sites Tested: ${sites.length}
-• Successful Scrapes: ${testResults.filter(r => r.status === 'success').length}
-• Changes Detected: ${changesDetected}
-• Notifications Sent: ${testResults.filter(r => r.notificationsSent).length}
-
-🔍 Detailed Results:
-${testResults.map(result => `
-📌 ${result.site}
-   URL: ${result.url}
-   Status: ${result.status === 'success' ? '✅ Success' : '❌ Failed'}
-   Changes: ${result.changesDetected ? '🔄 Yes' : '✅ No'}
-   ${result.changesDetected ? `Reason: ${result.changeReason}` : ''}
-   Notifications: ${result.notificationsSent ? '📧 Sent' : '❌ Not Sent'}
-   ${result.error ? `Error: ${result.error}` : ''}
-`).join('')}
-
-🎯 What This Test Did:
-1. ✅ Scraped all your monitored websites
-2. ✅ Checked for content changes
-3. ✅ Detected structural modifications
-4. ✅ Sent real notifications if changes found
-5. ✅ Verified email system functionality
-
-This was a REAL test of your monitoring system, not just email configuration!`;
-
-        // Try to send the comprehensive test results via email (but don't fail if email doesn't work)
+        // Try to send the test results via email (but don't fail if email doesn't work)
         let emailResult = null;
         try {
             emailResult = await notificationService.sendEmail(
                 req.user.id,
                 null, // No specific site for test
                 testMessage,
-                'Website Monitor - Comprehensive System Test Results'
+                'ウェブサイト監視システム - テスト結果'
             );
             
             // Check if it's using fallback mode
@@ -351,7 +327,7 @@ This was a REAL test of your monitoring system, not just email configuration!`;
         // Always return results to frontend, regardless of email success
         res.json({
             success: true,
-            message: `Comprehensive test completed! ${changesDetected} changes detected.`,
+            message: `テスト完了！${changesDetected}件の変更が検出されました。`,
             testResults: {
                 totalSites: sites.length,
                 changesDetected,
@@ -437,12 +413,12 @@ router.post('/test-line', authenticateToken, async (req, res) => {
 
                 if (changeResult.hasChanged) {
                     changesDetected++;
-                    console.log(`   🚨 Changes detected: ${changeResult.reason}`);
+                    console.log(`   🚨 変更が検出されました: ${changeResult.reason}`);
                     if (changeResult.notificationsSent) {
                         notificationsSent++;
                     }
                 } else {
-                    console.log(`   ✅ No changes detected`);
+                    console.log(`   ✅ 変更は検出されませんでした`);
                 }
             } catch (error) {
                 console.error(`   ❌ Error checking site ${site.name}:`, error.message);

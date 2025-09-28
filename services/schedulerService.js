@@ -133,7 +133,7 @@ class SchedulerService {
                     }
                 }
             } else {
-                console.log(`✅ No changes detected for ${site.name}`);
+                console.log(`✅ ${site.name}で変更は検出されませんでした`);
             }
 
         } catch (error) {

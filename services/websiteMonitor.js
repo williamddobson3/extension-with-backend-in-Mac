@@ -276,7 +276,7 @@ class WebsiteMonitor {
 
             // If keyword presence changed, report that with direction
             if (currentKeywords !== previousKeywords) {
-                const direction = currentKeywords ? 'Keywords appeared' : 'Keywords disappeared';
+                const direction = currentKeywords ? '新しいキーワードが検出されました' : 'キーワードが削除されました';
                 return {
                     hasChanged: true,
                     reason: direction,
@@ -346,7 +346,7 @@ class WebsiteMonitor {
                     };
                 }
             } else {
-                console.log(`✅ No changes detected for site ID: ${siteId}`);
+                console.log(`✅ サイトID ${siteId}で変更は検出されませんでした`);
                 return changeResult;
             }
             

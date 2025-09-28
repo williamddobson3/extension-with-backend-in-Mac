@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
@@ -12,22 +13,67 @@ const authRoutes = require('./routes/auth');
 const sitesRoutes = require('./routes/sites');
 const notificationsRoutes = require('./routes/notifications');
 const lineRoutes = require('./routes/line');
+const usersRoutes = require('./routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
 
+// Trust proxy for production deployments behind reverse proxies
+if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+}
+
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+    crossOriginEmbedderPolicy: false
+}));
 
 // CORS configuration
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['chrome-extension://*'] 
-        : ['http://localhost:3000', 'chrome-extension://*'],
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = process.env.NODE_ENV === 'production' 
+            ? [
+                /^chrome-extension:\/\/.*$/,
+                /^moz-extension:\/\/.*$/,
+                process.env.FRONTEND_URL,
+                process.env.ADMIN_URL
+              ].filter(Boolean)
+            : [
+                'http://localhost:3000',
+                'http://localhost:3001',
+                'http://127.0.0.1:3000',
+                /^chrome-extension:\/\/.*$/,
+                /^moz-extension:\/\/.*$/
+              ];
+
+        // Check if origin matches any allowed pattern
+        const isAllowed = allowedOrigins.some(allowedOrigin => {
+            if (typeof allowedOrigin === 'string') {
+                return origin === allowedOrigin;
+            } else if (allowedOrigin instanceof RegExp) {
+                return allowedOrigin.test(origin);
+            }
+            return false;
+        });
+
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.warn(`CORS blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -47,6 +93,9 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static files
+app.use(express.static('public'));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
@@ -62,6 +111,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sites', sitesRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/line', lineRoutes);
+app.use('/api/users', usersRoutes);
+
+// Admin page route
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
 // Admin routes (optional)
 app.get('/api/admin/status', async (req, res) => {

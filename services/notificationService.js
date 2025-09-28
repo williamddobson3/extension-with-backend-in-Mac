@@ -164,9 +164,14 @@ class NotificationService {
                 siteName = user.site_name;
                 siteUrl = user.url;
             } else {
-                // Handle test notifications
+                // Handle test notifications - use first monitored site if available
                 const [users] = await pool.execute(
-                    'SELECT email FROM users WHERE id = ?',
+                    `SELECT u.email, ms.name as site_name, ms.url 
+                     FROM users u 
+                     LEFT JOIN monitored_sites ms ON ms.user_id = u.id AND ms.is_active = true
+                     WHERE u.id = ?
+                     ORDER BY ms.created_at ASC
+                     LIMIT 1`,
                     [userId]
                 );
                 
@@ -175,8 +180,15 @@ class NotificationService {
                 }
                 
                 user = { email: users[0].email };
-                siteName = 'Test Site';
-                siteUrl = 'https://example.com';
+                
+                if (users[0].site_name && users[0].url) {
+                    siteName = users[0].site_name;
+                    siteUrl = users[0].url;
+                } else {
+                    // Fallback if no sites are monitored
+                    siteName = 'テストサイト';
+                    siteUrl = 'https://example.com';
+                }
             }
             
             // For test notifications, siteId can be null. Avoid noisy logging.
@@ -416,7 +428,14 @@ class NotificationService {
                 messages: [
                     {
                         type: 'text',
-                        text: `🔔 ウェブサイト更新が検出されました！\n\n📊 サイト: ${siteName}\n🌐 URL: ${siteUrl}\n\n📝 詳細:\n${message}\n\nこの通知は、ウェブサイト監視システムによって自動的に送信されました。`
+                        text: `🔔 ウェブサイト更新が検出されました！<br/>
+📊 サイト: ${siteName}<br/>
+🌐 URL: ${siteUrl}<br/>
+<br/>
+📝 詳細:<br/>
+${message}<br/>
+<br/>
+この通知は、ウェブサイト監視システムによって自動的に送信されました。`
                     }
                 ]
             };

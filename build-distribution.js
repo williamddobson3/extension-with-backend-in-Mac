@@ -125,7 +125,7 @@ pause
     const startBatch = `@echo off
 echo 🚀 Starting Website Monitor Server...
 echo.
-echo 📍 Server will be available at: http://localhost:3003
+echo 📍 Server will be available at: http://localhost:3000
 echo 🌐 Chrome extension will connect to this server
 echo.
 echo ⚠️  Keep this window open while using the extension
@@ -180,7 +180,7 @@ read -p "Press Enter to continue..."
     const linuxStart = `#!/bin/bash
 echo "🚀 Starting Website Monitor Server..."
 echo ""
-echo "📍 Server will be available at: http://localhost:3003"
+echo "📍 Server will be available at: http://localhost:3000"
 echo "🌐 Chrome extension will connect to this server"
 echo ""
 echo "⚠️  Keep this terminal open while using the extension"
@@ -300,7 +300,7 @@ EMAIL_PASS=your_app_password
 - Verify MySQL is accessible
 
 ### "Port Already in Use"
-- Change the port in your .env file (e.g., from 3003 to 3004)
+- Change the port in your .env file (e.g., from 3000 to 3000)
 
 ### Extension Not Loading
 - Make sure you enabled Developer mode

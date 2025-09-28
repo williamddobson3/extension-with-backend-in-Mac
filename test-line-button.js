@@ -33,14 +33,7 @@ async function testLineButton() {
    Reason: Content has been updated
    Notifications: 📧 Sent
 
-🎯 What This Test Did:
-1. ✅ Scraped all your monitored websites
-2. ✅ Checked for content changes
-3. ✅ Detected structural modifications
-4. ✅ Sent real notifications if changes found
-5. ✅ Verified LINE system functionality
-
-This was a REAL test of your monitoring system, not just LINE configuration!`;
+Test completed successfully.`;
 
         // Test LINE notification with comprehensive message
         const result = await notificationService.sendLineNotification(

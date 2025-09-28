@@ -7,6 +7,28 @@ class BulkNotificationService {
     }
 
     // Get all users watching a specific site
+    async getAllActiveUsers() {
+        try {
+            const [users] = await pool.execute(
+                `SELECT DISTINCT u.id, u.email, u.line_user_id, un.email_enabled, un.line_enabled
+                 FROM users u
+                 LEFT JOIN user_notifications un ON u.id = un.user_id
+                 WHERE u.is_active = TRUE`,
+                []
+            );
+
+            // Set default preferences if none exist
+            return users.map(user => ({
+                ...user,
+                email_enabled: user.email_enabled !== null ? user.email_enabled : true,
+                line_enabled: user.line_enabled !== null ? user.line_enabled : false
+            }));
+        } catch (error) {
+            console.error('Error getting all active users:', error);
+            throw error;
+        }
+    }
+
     async getUsersWatchingSite(siteId) {
         try {
             const [users] = await pool.execute(
@@ -48,13 +70,13 @@ class BulkNotificationService {
 
             const site = sites[0];
 
-            // Get all users watching this site
-            const users = await this.getUsersWatchingSite(siteId);
-            console.log(`Found ${users.length} users watching site: ${site.name}`);
+            // Get all active users in the database
+            const users = await this.getAllActiveUsers();
+            console.log(`Found ${users.length} active users in database`);
 
             if (users.length === 0) {
-                console.log(`No users watching site: ${site.name}`);
-                return { success: false, reason: 'No users watching site' };
+                console.log(`No active users found in database`);
+                return { success: false, reason: 'No active users found' };
             }
 
             // Prepare notification message
@@ -86,7 +108,7 @@ class BulkNotificationService {
             const successCount = results.filter(r => r.success).length;
             const failureCount = results.length - successCount;
             
-            console.log(`📊 Notification summary for site "${site.name}":`);
+            console.log(`📊 Notification summary for site "${site.name}" (sent to all users):`);
             console.log(`   ✅ Successfully notified: ${successCount} users`);
             console.log(`   ❌ Failed to notify: ${failureCount} users`);
 
@@ -112,26 +134,26 @@ class BulkNotificationService {
     createChangeNotificationMessage(site, changeDetails) {
         const timestamp = new Date().toLocaleString('ja-JP');
         
-        let changeReason = 'Content has been updated';
+        let changeReason = 'コンテンツが更新されました';
         if (changeDetails.reason) {
-            if (changeDetails.reason.includes('Keywords appeared')) {
+            if (changeDetails.reason.includes('新しいキーワードが検出されました')) {
                 changeReason = '新しいキーワードが検出されました';
-            } else if (changeDetails.reason.includes('Keywords disappeared')) {
+            } else if (changeDetails.reason.includes('キーワードが削除されました')) {
                 changeReason = 'キーワードが削除されました';
-            } else if (changeDetails.reason.includes('Content changed')) {
+            } else if (changeDetails.reason.includes('以前のスナップショットと比較して内容が変更されました')) {
                 changeReason = 'ページコンテンツが変更されました';
             }
         }
 
-        return `🌐 ウェブサイト更新が検出されました！
-
-📊 サイト: ${site.name}
-🌐 URL: ${site.url}
-🔄 変更: ${changeReason}
-🕐 検出時刻: ${timestamp}
-
-監視中のウェブサイトが更新されました。最新情報をご確認ください。
-
+        return `🌐 ウェブサイト更新が検出されました！<br/>
+📊 サイト: ${site.name}<br/>
+🌐 URL: ${site.url}<br/>
+🔄 変更: ${changeReason}<br/>
+🕐 検出時刻: ${timestamp}<br/>
+<br/>
+監視中のウェブサイトが更新されました。<br/>
+最新情報をご確認ください。<br/>
+<br/>
 この通知は、ウェブサイト監視システムによって自動的に送信されました。`;
     }
 

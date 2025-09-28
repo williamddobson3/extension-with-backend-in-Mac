@@ -100,7 +100,7 @@ http://your-domain.com/api/line/webhook
 
 **For local development:**
 ```
-http://localhost:3003/api/line/webhook
+http://localhost:3000/api/line/webhook
 ```
 
 **For production:**
@@ -136,10 +136,10 @@ The following tables support LINE integration:
 ### Debug Commands
 ```bash
 # Check server status
-curl http://localhost:3003/health
+curl http://localhost:3000/health
 
 # Test LINE webhook (when server running)
-curl -X POST http://localhost:3003/api/line/webhook \
+curl -X POST http://localhost:3000/api/line/webhook \
   -H "Content-Type: application/json" \
   -d '{"events":[{"type":"message","message":{"type":"text","text":"test"},"source":{"userId":"test"}}]}'
 ```

@@ -285,47 +285,24 @@ router.post('/test-email', authenticateToken, async (req, res) => {
             }
         }
 
-        // Create comprehensive test summary
-        const testMessage = `🧪 Website Monitoring System Test Results
+        // Create simple test summary
+        const testMessage = `Website Monitor Test Results
 
-🌐 Service: Website Monitor
-📧 Type: Comprehensive System Test
-🕐 Test Completed: ${new Date().toLocaleString('ja-JP')}
+Test completed: ${new Date().toLocaleString('ja-JP')}
+Sites tested: ${sites.length}
+Changes detected: ${changesDetected}
+Notifications sent: ${testResults.filter(r => r.notificationsSent).length}
 
-📊 Test Summary:
-• Total Sites Tested: ${sites.length}
-• Successful Scrapes: ${testResults.filter(r => r.status === 'success').length}
-• Changes Detected: ${changesDetected}
-• Notifications Sent: ${testResults.filter(r => r.notificationsSent).length}
+${changesDetected > 0 ? 'Changes were detected and notifications sent.' : 'No changes detected.'}`;
 
-🔍 Detailed Results:
-${testResults.map(result => `
-📌 ${result.site}
-   URL: ${result.url}
-   Status: ${result.status === 'success' ? '✅ Success' : '❌ Failed'}
-   Changes: ${result.changesDetected ? '🔄 Yes' : '✅ No'}
-   ${result.changesDetected ? `Reason: ${result.changeReason}` : ''}
-   Notifications: ${result.notificationsSent ? '📧 Sent' : '❌ Not Sent'}
-   ${result.error ? `Error: ${result.error}` : ''}
-`).join('')}
-
-🎯 What This Test Did:
-1. ✅ Scraped all your monitored websites
-2. ✅ Checked for content changes
-3. ✅ Detected structural modifications
-4. ✅ Sent real notifications if changes found
-5. ✅ Verified email system functionality
-
-This was a REAL test of your monitoring system, not just email configuration!`;
-
-        // Try to send the comprehensive test results via email (but don't fail if email doesn't work)
+        // Try to send the test results via email (but don't fail if email doesn't work)
         let emailResult = null;
         try {
             emailResult = await notificationService.sendEmail(
                 req.user.id,
                 null, // No specific site for test
                 testMessage,
-                'Website Monitor - Comprehensive System Test Results'
+                'Website Monitor - Test Results'
             );
             
             // Check if it's using fallback mode
@@ -351,7 +328,7 @@ This was a REAL test of your monitoring system, not just email configuration!`;
         // Always return results to frontend, regardless of email success
         res.json({
             success: true,
-            message: `Comprehensive test completed! ${changesDetected} changes detected.`,
+            message: `Test completed! ${changesDetected} changes detected.`,
             testResults: {
                 totalSites: sites.length,
                 changesDetected,
@@ -390,7 +367,7 @@ router.post('/test-line', authenticateToken, async (req, res) => {
 
         const testMessage = `This is a test notification from your website monitoring service.
 
-🌐 Service: Website Monitor
+🌐 Service: ウェブサイトモニター
 📱 Type: Test LINE Message
 🕐 Sent: ${new Date().toLocaleString('ja-JP')}
 

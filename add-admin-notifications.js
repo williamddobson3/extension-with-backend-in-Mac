@@ -18,7 +18,7 @@ if (fs.existsSync(envPath)) {
 // Add admin notification configuration
 const adminConfig = `
 # Admin Notifications - Site management alerts
-ADMIN_EMAIL=admin@example.com
+ADMIN_EMAIL=KM@sabosuku.com
 ADMIN_NOTIFICATIONS_ENABLED=true
 `;
 
@@ -29,7 +29,7 @@ try {
     fs.writeFileSync(envPath, updatedEnv);
     console.log('✅ Admin notification configuration added!');
     console.log('\n📧 New Configuration:');
-    console.log('   ADMIN_EMAIL: admin@example.com (change this to your desired email)');
+    console.log('   ADMIN_EMAIL: KM@sabosuku.com (change this to your desired email)');
     console.log('   ADMIN_NOTIFICATIONS_ENABLED: true');
     
     console.log('\n💡 Next steps:');

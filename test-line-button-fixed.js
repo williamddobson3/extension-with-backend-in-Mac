@@ -7,7 +7,7 @@ async function testLineButtonFixed() {
     try {
         // First login to get auth token
         console.log('1️⃣ Logging in...');
-        const loginResponse = await axios.post('http://localhost:3003/api/auth/login', {
+        const loginResponse = await axios.post('http://localhost:3000/api/auth/login', {
             username: 'linetest',
             password: 'test123'
         });
@@ -22,7 +22,7 @@ async function testLineButtonFixed() {
         // Test LINE button endpoint
         console.log('2️⃣ Testing LINE button endpoint...');
         const testResponse = await axios.post(
-            'http://localhost:3003/api/notifications/test-line',
+            'http://localhost:3000/api/notifications/test-line',
             {},
             {
                 headers: {

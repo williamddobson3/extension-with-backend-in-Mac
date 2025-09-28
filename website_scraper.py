@@ -857,7 +857,7 @@ def load_config() -> Dict[str, str]:
     config['EMAIL_PASS'] = os.getenv('EMAIL_PASS', 'hzpw wojd xszu ladn')
     
     # Admin configuration
-    config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'admin@example.com')
+    config['ADMIN_EMAIL'] = os.getenv('ADMIN_EMAIL', 'KM@sabosuku.com')
     config['ADMIN_NOTIFICATIONS_ENABLED'] = os.getenv('ADMIN_NOTIFICATIONS_ENABLED', 'true')
     
     return config

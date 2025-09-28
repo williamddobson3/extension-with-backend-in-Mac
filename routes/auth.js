@@ -9,13 +9,13 @@ const router = express.Router();
 // Register new user
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, line_user_id } = req.body;
 
         // Validate input
         if (!username || !email || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Username, email, and password are required'
+                message: 'User ID, email, and password are required'
             });
         }
 
@@ -23,6 +23,24 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Validate username format (should be alphanumeric and underscores only)
+        const userIdRegex = /^[a-zA-Z0-9_]+$/;
+        if (!userIdRegex.test(username)) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID must contain only letters, numbers, and underscores'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
             });
         }
 
@@ -35,7 +53,7 @@ router.post('/register', async (req, res) => {
         if (existingUsers.length > 0) {
             return res.status(409).json({
                 success: false,
-                message: 'Username or email already exists'
+                message: 'User ID or email already exists'
             });
         }
 
@@ -43,16 +61,20 @@ router.post('/register', async (req, res) => {
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Create user
+        // Check if user should be admin
+        const isAdmin = email === 'KM@sabosuku.com';
+
+        // Create user with LINE ID if provided
         const [result] = await pool.execute(
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-            [username, email, passwordHash]
+            'INSERT INTO users (username, email, password_hash, line_user_id, is_admin) VALUES (?, ?, ?, ?, ?)',
+            [username, email, passwordHash, line_user_id || null, isAdmin || false]
         );
 
         // Create default notification preferences
+        const lineEnabled = line_user_id ? true : false;
         await pool.execute(
-            'INSERT INTO user_notifications (user_id, email_enabled, line_enabled) VALUES (?, true, false)',
-            [result.insertId]
+            'INSERT INTO user_notifications (user_id, email_enabled, line_enabled, line_user_id) VALUES (?, true, ?, ?)',
+            [result.insertId, lineEnabled, line_user_id || null]
         );
 
         // Generate JWT token
@@ -69,7 +91,8 @@ router.post('/register', async (req, res) => {
             user: {
                 id: result.insertId,
                 username,
-                email
+                email,
+                line_user_id: line_user_id || null
             }
         });
 
@@ -97,7 +120,7 @@ router.post('/login', async (req, res) => {
 
         // Find user
         const [users] = await pool.execute(
-            'SELECT id, username, email, password_hash, is_active FROM users WHERE username = ? OR email = ?',
+            'SELECT id, username, email, password_hash, is_active, is_admin FROM users WHERE username = ? OR email = ?',
             [username, username]
         );
 
@@ -141,7 +164,8 @@ router.post('/login', async (req, res) => {
             user: {
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                is_admin: user.is_admin || false
             }
         });
 
@@ -158,7 +182,7 @@ router.post('/login', async (req, res) => {
 router.get('/profile', authenticateToken, async (req, res) => {
     try {
         const [users] = await pool.execute(
-            'SELECT id, username, email, line_user_id, created_at FROM users WHERE id = ?',
+            'SELECT id, username, email, line_user_id, is_admin, created_at FROM users WHERE id = ?',
             [req.user.id]
         );
 
