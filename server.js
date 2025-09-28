@@ -5,6 +5,17 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
+// Provide a stable fetch implementation for server-side code (use node-fetch v2 which works with CommonJS)
+try {
+    // eslint-disable-next-line global-require
+    const fetch = require('node-fetch');
+    if (!global.fetch) {
+        global.fetch = fetch;
+    }
+} catch (err) {
+    console.warn('node-fetch not available, falling back to global.fetch if present');
+}
+
 const { testConnection } = require('./config/database');
 const schedulerService = require('./services/schedulerService');
 
