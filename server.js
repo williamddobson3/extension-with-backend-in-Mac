@@ -201,16 +201,19 @@ app.use((error, req, res, next) => {
 });
 
 // Start server
+const HOST = process.env.HOST || '0.0.0.0';
+let server;
 const startServer = async () => {
     try {
         // Test database connection
         await testConnection();
         
-        // Start the server
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running on port ${PORT}`);
+        // Start the server (bind to HOST so it can accept external connections)
+        server = app.listen(PORT, HOST, () => {
+            console.log(`🚀 Server running on ${HOST}:${PORT}`);
             console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+            const publicHost = process.env.PUBLIC_HOST || HOST;
+            console.log(`🔗 Health check: http://${publicHost}:${PORT}/health`);
         });
 
         // Start the scheduler

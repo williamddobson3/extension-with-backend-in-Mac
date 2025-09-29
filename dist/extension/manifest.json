@@ -8,8 +8,8 @@
     "activeTab",
     "notifications"
   ],
-  "host_permissions": [
-    "http://localhost:3000/*",
+    "host_permissions": [
+    "http://49.212.153.246:3000/*",
     "https://*/*"
   ],
   "background": {

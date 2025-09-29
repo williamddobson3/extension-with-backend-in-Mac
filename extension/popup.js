@@ -1,7 +1,7 @@
 // Global variables
 let currentUser = null;
 let authToken = null;
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://49.212.153.246:3000/api';
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
@@ -1107,7 +1107,7 @@ function setupAdminFunctions() {
 function openManagementWindow() {
     try {
         // Create URL with token parameter
-        const managementUrl = `http://localhost:3000/admin?token=${encodeURIComponent(authToken)}`;
+    const managementUrl = `http://49.212.153.246:3000/admin?token=${encodeURIComponent(authToken)}`;
         
         // Open new window
         const newWindow = window.open(managementUrl, 'userManagement', 'width=1200,height=800,scrollbars=yes,resizable=yes');
