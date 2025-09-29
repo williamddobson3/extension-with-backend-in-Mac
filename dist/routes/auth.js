@@ -43,13 +43,10 @@ router.post('/register', async (req, res) => {
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Determine admin status and create user
-        const adminEmails = ['km@sabosuku.com', 'haibanosirase@gmail.com'];
-        const isAdmin = adminEmails.includes(email.toLowerCase());
-
+        // Create user
         const [result] = await pool.execute(
-            'INSERT INTO users (username, email, password_hash, is_admin) VALUES (?, ?, ?, ?)',
-            [username, email, passwordHash, isAdmin ? 1 : 0]
+            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+            [username, email, passwordHash]
         );
 
         // Create default notification preferences

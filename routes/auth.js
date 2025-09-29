@@ -57,13 +57,14 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        // Hash password
-        const saltRounds = 12;
-        const passwordHash = await bcrypt.hash(password, saltRounds);
+    // Hash password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Check if user should be admin (case-insensitive match against a configured list)
-    const adminEmails = ['km@sabosuku.com', 'haibanosirase@gmail.com'];
-    const isAdmin = adminEmails.includes(email.toLowerCase());
+    // Normalize email and check if user should be admin
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const adminAllowlist = new Set(['km@sabosuku.com', 'haibanosirase@gmail.com']);
+    const isAdmin = adminAllowlist.has(normalizedEmail);
 
         // Create user with LINE ID if provided
         const [result] = await pool.execute(
