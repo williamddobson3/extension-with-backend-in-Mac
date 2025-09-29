@@ -15,8 +15,8 @@ async function setupDatabase() {
         // Create connection without database
         const connection = await mysql.createConnection({
             host: process.env.DB_HOST || 'localhost',
-            user: process.env.DB_USER || 'root',
-            password: process.env.DB_PASSWORD || '',
+            user: process.env.DB_USER || 'backend_user',
+            password: process.env.DB_PASSWORD || 'cupideroskama200334!@#QWE',
             port: process.env.DB_PORT || 3306
         });
 

@@ -10,8 +10,8 @@ async function runAdminMigration() {
         // Create connection
         connection = await mysql.createConnection({
             host: process.env.DB_HOST || 'localhost',
-            user: process.env.DB_USER || 'root',
-            password: process.env.DB_PASSWORD || '',
+            user: process.env.DB_USER || 'backend_user',
+            password: process.env.DB_PASSWORD || 'cupideroskama200334!@#QWE',
             database: process.env.DB_NAME || 'website_monitor'
         });
 

@@ -12,8 +12,8 @@ async function testFixedSystem() {
         // Connect to database
         connection = await mysql.createConnection({
             host: 'localhost',
-            user: 'root',
-            password: '',
+            user: 'backend_user',
+            password: 'cupideroskama200334!@#QWE',
             database: 'website_monitor'
         });
 
