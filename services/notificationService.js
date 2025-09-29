@@ -142,7 +142,7 @@ class NotificationService {
     }
 
     // Send email notification
-    async sendEmail(userId, siteId, message, subject = 'ウェブサイト更新が検出されました') {
+    async sendEmail(userId, siteId, message, subject = 'ウェブサイト更新が検出されました', force = false) {
         try {
             let user, siteName, siteUrl;
             
@@ -199,7 +199,7 @@ class NotificationService {
                 [userId]
             );
 
-            if (notifications.length === 0 || !notifications[0].email_enabled) {
+            if (!force && (notifications.length === 0 || !notifications[0].email_enabled)) {
                 console.log(`Email notifications disabled for user ${userId}`);
                 return { success: false, reason: 'Email notifications disabled' };
             }
@@ -378,7 +378,7 @@ class NotificationService {
     }
 
     // Send LINE notification
-    async sendLineNotification(userId, siteId, message) {
+    async sendLineNotification(userId, siteId, message, force = false) {
         try {
             let user, siteName, siteUrl;
             

@@ -175,169 +175,30 @@ router.post('/test-email', authenticateToken, async (req, res) => {
     try {
         console.log(`🧪 Starting comprehensive email test for user ${req.user.id}`);
         
-        // Get user email and monitored sites
-        const [users] = await pool.execute(
-            'SELECT email FROM users WHERE id = ?',
-            [req.user.id]
-        );
-
-        if (users.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        // Broadcast test email to ALL users in the database
+        const [allUsers] = await pool.execute('SELECT id, email FROM users');
+        if (allUsers.length === 0) {
+            return res.status(400).json({ success: false, message: 'No registered users found' });
         }
 
-        // Get all active sites monitored by this user
-        const [sites] = await pool.execute(
-            'SELECT id, name, url, keywords FROM monitored_sites WHERE user_id = ? AND is_active = true',
-            [req.user.id]
-        );
+        const notificationService = require('../services/notificationService');
+        const testMessage = `ウェブサイト監視システム - テストメッセージ\n送信日時: ${new Date().toLocaleString('ja-JP')}`;
 
-        if (sites.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: '監視サイトが見つかりません。まず監視するサイトを追加してください。'
-            });
-        }
-
-        console.log(`🔍 Found ${sites.length} sites to test for user ${req.user.id}`);
-
-        // Import required services
-        const websiteMonitor = require('../services/websiteMonitor');
-        const bulkNotificationService = require('../services/bulkNotificationService');
-
-        let testResults = [];
-        let changesDetected = 0;
-
-        // Test each monitored site
-        for (const site of sites) {
+        const results = [];
+        for (const u of allUsers) {
             try {
-                console.log(`🌐 Testing site: ${site.name} (${site.url})`);
-                
-                // 1. Scrape the website and check for changes
-                const scrapeResult = await websiteMonitor.checkWebsite(
-                    site.id, 
-                    site.url, 
-                    site.keywords
-                );
-
-                if (scrapeResult.success) {
-                    console.log(`✅ Site ${site.name} scraped successfully`);
-                    
-                    // 2. Check if changes were detected
-                    const changeResult = await websiteMonitor.detectChanges(site.id);
-                    
-                    if (changeResult.hasChanged) {
-                        changesDetected++;
-                        console.log(`🔄 ${site.name}で変更が検出されました: ${changeResult.reason}`);
-                        
-                        // 3. Send real notifications about the changes
-                        const notificationResult = await bulkNotificationService.notifySiteChange(site.id, changeResult);
-                        
-                        testResults.push({
-                            site: site.name,
-                            url: site.url,
-                            status: 'success',
-                            changesDetected: true,
-                            changeReason: changeResult.reason,
-                            notificationsSent: notificationResult.success,
-                            notificationDetails: notificationResult
-                        });
-                        
-                    } else {
-                        console.log(`✅ ${site.name}で変更は検出されませんでした`);
-                        testResults.push({
-                            site: site.name,
-                            url: site.url,
-                            status: 'success',
-                            changesDetected: false,
-                            changeReason: '変更は検出されませんでした',
-                            notificationsSent: false
-                        });
-                    }
-                    
-                } else {
-                    console.log(`❌ Failed to scrape ${site.name}: ${scrapeResult.error}`);
-                    testResults.push({
-                        site: site.name,
-                        url: site.url,
-                        status: 'failed',
-                        error: scrapeResult.error,
-                        changesDetected: false,
-                        notificationsSent: false
-                    });
-                }
-
-                // Add small delay between sites to avoid overwhelming servers
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-            } catch (error) {
-                console.error(`Error testing site ${site.name}:`, error);
-                testResults.push({
-                    site: site.name,
-                    url: site.url,
-                    status: 'error',
-                    error: error.message,
-                    changesDetected: false,
-                    notificationsSent: false
-                });
+                // Force send regardless of user preference
+                const result = await notificationService.sendEmail(u.id, null, testMessage, 'Website Monitor - Test', true);
+                results.push({ userId: u.id, email: u.email, result });
+            } catch (err) {
+                results.push({ userId: u.id, email: u.email, error: err.message });
             }
+
+            // Small delay to avoid rate limits
+            await new Promise(r => setTimeout(r, 300));
         }
 
-        // Create simple test summary
-        const testMessage = `ウェブサイト監視テスト結果<br/>
-テスト完了: ${new Date().toLocaleString('ja-JP')}<br/>
-テスト対象サイト数: ${sites.length}<br/>
-変更検出数: ${changesDetected}<br/>
-通知送信数: ${testResults.filter(r => r.notificationsSent).length}<br/>
-<br/>
-${changesDetected > 0 ? '変更が検出され、通知が送信されました。' : '変更は検出されませんでした。'}`;
-
-        // Try to send the test results via email (but don't fail if email doesn't work)
-        let emailResult = null;
-        try {
-            emailResult = await notificationService.sendEmail(
-                req.user.id,
-                null, // No specific site for test
-                testMessage,
-                'ウェブサイト監視システム - テスト結果'
-            );
-            
-            // Check if it's using fallback mode
-            if (emailResult.fallback) {
-                console.log('📧 Email using fallback mode due to network restrictions');
-            }
-        } catch (emailError) {
-            console.log('📧 Email test failed (expected due to network restrictions):', emailError.message);
-            emailResult = { success: false, reason: 'Email blocked by network restrictions' };
-        }
-
-        // Prepare detailed change information for frontend
-        const changes = testResults
-            .filter(r => r.changesDetected)
-            .map(result => ({
-                siteName: result.site,
-                siteUrl: result.url,
-                changeType: result.changeReason || 'Content Modified',
-                changeDetails: result.changeReason || 'Page content has been updated',
-                notificationStatus: result.notificationsSent ? 'Sent' : 'Failed'
-            }));
-
-        // Always return results to frontend, regardless of email success
-        res.json({
-            success: true,
-            message: `テスト完了！${changesDetected}件の変更が検出されました。`,
-            testResults: {
-                totalSites: sites.length,
-                changesDetected,
-                notificationsSent: testResults.filter(r => r.notificationsSent).length,
-                results: testResults,
-                changes: changes, // Add detailed change information
-                emailStatus: emailResult ? emailResult.success : false,
-                emailMessage: emailResult ? emailResult.reason : 'Email not attempted'
-            }
-        });
+        res.json({ success: true, message: `Broadcast email test sent to ${allUsers.length} users`, results });
 
     } catch (error) {
         console.error('Comprehensive test email error:', error);
@@ -351,155 +212,29 @@ ${changesDetected > 0 ? '変更が検出され、通知が送信されました�
 // Test LINE notification with comprehensive monitoring
 router.post('/test-line', authenticateToken, async (req, res) => {
     try {
-        console.log(`🧪 Starting comprehensive LINE test for user ${req.user.id}`);
-        
-        // Check if LINE user ID is configured
-        const [users] = await pool.execute(
-            'SELECT line_user_id FROM users WHERE id = ?',
-            [req.user.id]
-        );
-
-        if (users.length === 0 || !users[0].line_user_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'LINEユーザーIDが設定されていません。プロフィールからLINEユーザーIDを設定してください。'
-            });
+        // Broadcast LINE test to ALL users in database
+        const [allUsers] = await pool.execute('SELECT id, line_user_id FROM users WHERE line_user_id IS NOT NULL');
+        if (allUsers.length === 0) {
+            return res.status(400).json({ success: false, message: 'No users with LINE IDs found' });
         }
 
-        // Get all active sites monitored by this user
-        const [sites] = await pool.execute(
-            'SELECT id, name, url, keywords FROM monitored_sites WHERE user_id = ? AND is_active = true',
-            [req.user.id]
-        );
+        const notificationService = require('../services/notificationService');
+        const testMessage = `Website Monitor - Test Message\nSent: ${new Date().toLocaleString('ja-JP')}`;
 
-        if (sites.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: '監視サイトが見つかりません。まず監視するサイトを追加してください。'
-            });
-        }
-
-        console.log(`🔍 Found ${sites.length} sites to test for user ${req.user.id}`);
-
-        // Import required services
-        const websiteMonitor = require('../services/websiteMonitor');
-        const bulkNotificationService = require('../services/bulkNotificationService');
-
-        let testResults = [];
-        let changesDetected = 0;
-
-        // Test each monitored site
-        for (const site of sites) {
-            console.log(`🌐 Testing site: ${site.name} (${site.url})`);
-            
+        const results = [];
+        for (const u of allUsers) {
             try {
-                // First check the website
-                const checkResult = await websiteMonitor.checkWebsite(site.id, site.url, site.keywords);
-                
-                if (!checkResult.success) {
-                    throw new Error(checkResult.error || 'Failed to check website');
-                }
-                
-                // Then check for changes
-                const changeResult = await websiteMonitor.checkForChangesAndNotify(site.id);
-                
-                testResults.push({
-                    site: site.name,
-                    url: site.url,
-                    changesDetected: changeResult.hasChanged,
-                    changeReason: changeResult.reason,
-                    notificationsSent: changeResult.notificationsSent || false
-                });
-
-                if (changeResult.hasChanged) {
-                    changesDetected++;
-                    console.log(`   🚨 変更が検出されました: ${changeResult.reason}`);
-                    if (changeResult.notificationsSent) {
-                        notificationsSent++;
-                    }
-                } else {
-                    console.log(`   ✅ 変更は検出されませんでした`);
-                }
-            } catch (error) {
-                console.error(`   ❌ Error checking site ${site.name}:`, error.message);
-                testResults.push({
-                    site: site.name,
-                    url: site.url,
-                    changesDetected: false,
-                    changeReason: `Error: ${error.message}`,
-                    notificationsSent: false
-                });
+                const result = await notificationService.sendLineNotification(u.id, null, testMessage, true);
+                results.push({ userId: u.id, line_user_id: u.line_user_id, result });
+            } catch (err) {
+                results.push({ userId: u.id, line_user_id: u.line_user_id, error: err.message });
             }
+
+            // small delay to avoid rate limits
+            await new Promise(r => setTimeout(r, 300));
         }
 
-        // Count notifications sent (already handled by checkForChangesAndNotify)
-        let notificationsSent = testResults.filter(r => r.notificationsSent).length;
-
-        // Create test summary message in Japanese
-        const testMessage = `📊 テスト概要:
-• テストしたサイト数: ${sites.length}
-• 成功したスクレイピング: ${testResults.length}
-• 検出された変更: ${changesDetected}
-• 送信された通知: ${notificationsSent}
-
-🔍 詳細結果:
-
-${testResults.map(result => 
-    `🚀 ${result.site}
-   URL: ${result.url}
-   ステータス: ${result.changesDetected ? '🔄 変更検出' : '✅ 変更なし'}`
-).join('\n\n')}`;
-
-        // Send comprehensive test results via LINE
-        let lineResult = null;
-        try {
-            lineResult = await notificationService.sendLineNotification(
-                req.user.id,
-                null, // No specific site for test
-                testMessage,
-                'Website Monitor - Comprehensive System Test Results'
-            );
-            
-            console.log('📱 LINE test message sent successfully');
-        } catch (lineError) {
-            console.log('📱 LINE test failed:', lineError.message);
-            lineResult = { success: false, reason: lineError.message || 'Unknown error' };
-        }
-
-        // Prepare detailed change information for frontend
-        const changes = testResults
-            .filter(r => r.changesDetected)
-            .map(result => ({
-                siteName: result.site,
-                siteUrl: result.url,
-                changeType: result.changeReason || 'Content Modified',
-                changeDetails: result.changeReason || 'Page content has been updated',
-                notificationStatus: result.notificationsSent ? 'Sent' : 'Failed'
-            }));
-
-        // Check if LINE failed due to bot sending to itself
-        let responseMessage = `Comprehensive LINE test completed! ${changesDetected} changes detected.`;
-        if (lineResult && !lineResult.success) {
-            if (lineResult.error && lineResult.error.includes('ボット自身のLINE ID')) {
-                responseMessage = 'テストは完了しましたが、LINE送信に失敗しました。';
-            }
-        }
-
-        // Always return results to frontend, regardless of LINE success
-        res.json({
-            success: lineResult && lineResult.success,
-            message: responseMessage,
-            error: lineResult && !lineResult.success ? lineResult.error : undefined,
-            testResults: {
-                totalSites: sites.length,
-                changesDetected,
-                notificationsSent: testResults.filter(r => r.notificationsSent).length,
-                results: testResults,
-                changes: changes, // Add detailed change information
-                lineStatus: lineResult ? lineResult.success : false,
-                lineMessage: lineResult ? (lineResult.error || lineResult.reason) : 'LINE not attempted'
-            }
-        });
+        res.json({ success: true, message: `Broadcast LINE test sent to ${allUsers.length} users`, results });
 
     } catch (error) {
         console.error('Comprehensive test LINE error:', error);
@@ -585,13 +320,24 @@ router.post('/check-changes', authenticateToken, async (req, res) => {
     try {
         console.log(`🔍 Checking for recent changes for user ${req.user.id}`);
         
-        // Get user's monitored sites
-        const [sites] = await pool.execute(
+        // Get user's monitored sites. If the user has no personal sites (new user),
+        // fall back to monitoring ALL active sites in the database so the user
+        // can immediately receive notifications for public monitors.
+        const [userSites] = await pool.execute(
             'SELECT id, name, url FROM monitored_sites WHERE user_id = ? AND is_active = true',
             [req.user.id]
         );
 
-        if (sites.length === 0) {
+        let sites = userSites;
+        if (!sites || sites.length === 0) {
+            console.log(`User ${req.user.id} has no personal sites - falling back to all active sites`);
+            const [allSites] = await pool.execute(
+                'SELECT id, name, url FROM monitored_sites WHERE is_active = true'
+            );
+            sites = allSites;
+        }
+
+        if (!sites || sites.length === 0) {
             return res.json({
                 success: true,
                 changes: []
