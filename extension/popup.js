@@ -324,36 +324,61 @@ async function handleLogout() {
     showNotification('ログアウトしました', 'success');
 }
 
-// Load sites
+// Load sites from backend and render them
 async function loadSites() {
     try {
-        const response = await fetch(`${API_BASE_URL}/sites`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`
+        const headers = {};
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+        console.log('loadSites: calling', `${API_BASE_URL}/sites`, 'with headers', headers);
+        const response = await fetch(`${API_BASE_URL}/sites`, { headers });
+
+        // Debug: log response status, headers and raw body to help diagnose issues
+        try {
+            console.log('loadSites: response.status =', response.status);
+            const headerEntries = [];
+            for (const pair of response.headers.entries()) headerEntries.push(pair);
+            console.log('loadSites: response.headers =', headerEntries);
+            const raw = await response.clone().text();
+            console.log('loadSites: raw response body =', raw);
+        } catch (dbgErr) {
+            console.warn('loadSites: failed to log response details', dbgErr);
+        }
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                showNotification('認証が必要です。ログインしてください。', 'error');
+                return;
             }
-        });
+            throw new Error(`サーバーエラー: ${response.status}`);
+        }
 
         const data = await response.json();
-
-        if (data.success) {
-            displaySites(data.sites);
-        } else {
-            showNotification('サイトの読み込みに失敗しました', 'error');
+        let sites = [];
+        if (data) {
+            if (data.success && Array.isArray(data.sites)) sites = data.sites;
+            else if (Array.isArray(data.sites)) sites = data.sites;
+            else if (Array.isArray(data)) sites = data;
         }
+
+        displaySites(sites || []);
     } catch (error) {
         console.error('Load sites error:', error);
         showNotification('サイトの読み込みに失敗しました', 'error');
     }
 }
 
-// Display sites
+// Render sites into the DOM
 function displaySites(sites) {
     const sitesList = document.getElementById('sitesList');
     const noSites = document.getElementById('noSites');
 
-    if (sites.length === 0) {
+    if (!sitesList || !noSites) return;
+
+    if (!sites || sites.length === 0) {
         sitesList.style.display = 'none';
         noSites.style.display = 'block';
+        sitesList.innerHTML = '';
         return;
     }
 
@@ -364,8 +389,8 @@ function displaySites(sites) {
         <div class="site-card">
             <div class="site-header">
                 <div>
-                    <div class="site-name">${site.name}</div>
-                    <a href="${site.url}" target="_blank" class="site-url">${site.url}</a>
+                    <div class="site-name">${site.name || ''}</div>
+                    <a href="${site.url || '#'}" target="_blank" class="site-url">${site.url || ''}</a>
                 </div>
                 <div class="site-actions">
                     <button class="btn-icon" data-action="edit" data-site-id="${site.id}" title="編集">
@@ -380,7 +405,7 @@ function displaySites(sites) {
                 <div class="status-indicator ${site.is_active ? '' : 'inactive'}"></div>
                 <span>${site.is_active ? '監視中' : '停止中'}</span>
                 <span>•</span>
-                <span>${site.check_interval_hours}時間間隔</span>
+                <span>${site.check_interval_hours || ''}時間間隔</span>
             </div>
             <div class="site-info">
                 <span>最終チェック: ${site.last_check ? new Date(site.last_check).toLocaleString('ja-JP') : '未チェック'}</span>
@@ -390,6 +415,29 @@ function displaySites(sites) {
             </div>
         </div>
     `).join('');
+}
+
+// React to auth token changes in storage (so popup refreshes if token is set by background/other flow)
+if (chrome && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if (changes.authToken) {
+            authToken = changes.authToken.newValue;
+            if (authToken) {
+                (async () => {
+                    currentUser = await getCurrentUser();
+                    showDashboard();
+                    loadSites();
+                    loadNotificationPreferences();
+                    refreshUIAfterAuth();
+                })();
+            } else {
+                authToken = null;
+                currentUser = null;
+                showLoginForm();
+            }
+        }
+    });
 }
 
 // Show add site modal
@@ -1170,4 +1218,3 @@ function openManagementWindow() {
 // Global functions for onclick handlers
 window.showAddSiteModal = showAddSiteModal;
 window.closeModal = closeModal;
-

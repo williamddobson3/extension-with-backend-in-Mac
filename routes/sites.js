@@ -7,16 +7,14 @@ const adminNotificationService = require('../services/adminNotificationService')
 
 const router = express.Router();
 
-// Get all monitored sites for user
-router.get('/', authenticateToken, async (req, res) => {
+// Get all monitored sites (shared) - public
+router.get('/', async (req, res) => {
     try {
         const [sites] = await pool.execute(
             `SELECT id, url, name, check_interval_hours, keywords, is_active, 
                     last_check, created_at, updated_at
              FROM monitored_sites 
-             WHERE user_id = ? 
-             ORDER BY created_at DESC`,
-            [req.user.id]
+             ORDER BY created_at DESC`
         );
 
         // Get latest check results for each site
@@ -53,8 +51,8 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Get single monitored site
-router.get('/:id', authenticateToken, async (req, res) => {
+// Get single monitored site (public)
+router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -62,8 +60,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
             `SELECT id, url, name, check_interval_hours, keywords, is_active, 
                     last_check, created_at, updated_at
              FROM monitored_sites 
-             WHERE id = ? AND user_id = ?`,
-            [id, req.user.id]
+             WHERE id = ?`,
+            [id]
         );
 
         if (sites.length === 0) {
@@ -101,7 +99,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Add new monitored site
+// Add new monitored site (authenticated)
 router.post('/', authenticateToken, async (req, res) => {
     try {
         const { url, name, check_interval_hours = 24, keywords } = req.body;
@@ -132,10 +130,10 @@ router.post('/', authenticateToken, async (req, res) => {
             });
         }
 
-        // Check if site already exists for this user
+        // Check if site already exists globally
         const [existingSites] = await pool.execute(
-            'SELECT id FROM monitored_sites WHERE url = ? AND user_id = ?',
-            [url, req.user.id]
+            'SELECT id FROM monitored_sites WHERE url = ?',
+            [url]
         );
 
         if (existingSites.length > 0) {
