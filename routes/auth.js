@@ -61,8 +61,9 @@ router.post('/register', async (req, res) => {
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Check if user should be admin
-        const isAdmin = email === 'KM@sabosuku.com';
+    // Check if user should be admin (case-insensitive match against a configured list)
+    const adminEmails = ['km@sabosuku.com', 'haibanosirase@gmail.com'];
+    const isAdmin = adminEmails.includes(email.toLowerCase());
 
         // Create user with LINE ID if provided
         const [result] = await pool.execute(
