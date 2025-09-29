@@ -79,7 +79,6 @@ router.post('/register', async (req, res) => {
             [result.insertId, lineEnabled, line_user_id || null]
         );
 
-        // Generate JWT token
         const token = jwt.sign(
             { userId: result.insertId },
             process.env.JWT_SECRET,
