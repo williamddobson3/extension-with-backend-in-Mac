@@ -16,8 +16,6 @@ const dbConfig = {
     } : false,
     // Connection timeout settings
     connectTimeout: 60000,
-    acquireTimeout: 60000,
-    timeout: 60000
 };
 
 const pool = mysql.createPool(dbConfig);
