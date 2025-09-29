@@ -174,6 +174,42 @@ function setupDashboard() {
     setupAdminFunctions();
 }
 
+// Refresh minimal UI pieces that depend on authentication immediately
+function refreshUIAfterAuth() {
+    try {
+        // Update username display
+        if (currentUser) {
+            const usernameEl = document.getElementById('username');
+            if (usernameEl) usernameEl.textContent = currentUser.username || '';
+
+            // Show admin tab / settings icon if user is admin
+            const adminTab = document.querySelector('.admin-tab');
+            if (adminTab) {
+                adminTab.style.display = currentUser.is_admin ? 'flex' : 'none';
+            }
+        }
+
+        // Make sure notification settings elements reflect auth state (enable inputs)
+        const emailEnabled = document.getElementById('emailEnabled');
+        const lineEnabled = document.getElementById('lineEnabled');
+        if (emailEnabled) emailEnabled.disabled = false;
+        if (lineEnabled) lineEnabled.disabled = false;
+
+        // Ensure add site button is present and enabled
+        const addSiteBtn = document.getElementById('addSiteBtn');
+        if (addSiteBtn) addSiteBtn.disabled = false;
+
+        // If popup is open, notify any listeners that auth state changed
+        try {
+            chrome.runtime.sendMessage({ action: 'authStateChanged', user: currentUser });
+        } catch (e) {
+            // runtime may not be available in some test contexts
+        }
+    } catch (err) {
+        console.error('Error refreshing UI after auth:', err);
+    }
+}
+
 // Handle login
 async function handleLogin(event) {
     event.preventDefault();
@@ -200,6 +236,8 @@ async function handleLogin(event) {
             showDashboard();
             loadSites();
             loadNotificationPreferences();
+                // Immediately refresh small UI pieces that depend on auth (no full re-render)
+                refreshUIAfterAuth();
         } else {
             showNotification(data.message || 'ログインに失敗しました', 'error');
         }
@@ -266,6 +304,8 @@ async function handleRegister(event) {
             showDashboard();
             loadSites();
             loadNotificationPreferences();
+                // Immediately refresh small UI pieces that depend on auth (no full re-render)
+                refreshUIAfterAuth();
         } else {
             showNotification(data.message || '登録に失敗しました', 'error');
         }

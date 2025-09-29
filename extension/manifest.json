@@ -5,8 +5,11 @@
   "description": "Monitor website changes and get notifications via email or LINE",
   "permissions": [
     "storage",
+    "notifications",
+    "alarms",
     "activeTab",
-    "notifications"
+    "scripting",
+    "https://your-api.example.com/*"
   ],
     "host_permissions": [
     "http://49.212.153.246:3000/*",

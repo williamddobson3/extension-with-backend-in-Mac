@@ -1,5 +1,51 @@
 // Background service worker for Website Monitor extension
 
+const API_BASE = 'https://your-api.example.com'; // replace with your backend
+
+// Fetch the shared monitored sites from central DB
+async function fetchMonitoredSitesFromServer(authToken = '') {
+    const res = await fetch(`${API_BASE}/monitored_sites`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : ''
+        }
+    });
+    if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`);
+    }
+    return await res.json(); // expects [{ id, url, selector, last_snapshot, ... }, ...]
+}
+
+// Add a monitored site to server
+async function addMonitoredSiteToServer(site, authToken = '') {
+    const res = await fetch(`${API_BASE}/monitored_sites`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : ''
+        },
+        body: JSON.stringify(site)
+    });
+    if (!res.ok) throw new Error('Failed to add site');
+    return await res.json();
+}
+
+// When user signs-in or extension starts, sync remote -> local cache
+async function syncSitesOnAuthChange(authToken = '') {
+    try {
+        const sites = await fetchMonitoredSitesFromServer(authToken);
+        // store locally as cache for fast UI
+        chrome.storage.local.set({ monitored_sites: sites }, () => {
+            console.log('Monitored sites synced from server:', sites.length);
+            // notify popup/UI to refresh if open
+            chrome.runtime.sendMessage({ action: 'monitoredSitesUpdated', sites });
+        });
+    } catch (err) {
+        console.error('Failed to sync sites from server:', err);
+    }
+}
+
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
@@ -38,6 +84,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         default:
             sendResponse({ error: 'Unknown action' });
     }
+});
+
+// Listen to messages from popup/content
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    (async () => {
+        try {
+            if (request.action === 'fetchSharedSites') {
+                // optionally include auth token if you require auth. Example: get token from storage
+                const { authToken } = await new Promise(res => chrome.storage.local.get('authToken', res));
+                const sites = await fetchMonitoredSitesFromServer(authToken);
+                sendResponse({ ok: true, sites });
+            } else if (request.action === 'addSiteRemote') {
+                const { site } = request;
+                const { authToken } = await new Promise(res => chrome.storage.local.get('authToken', res));
+                const created = await addMonitoredSiteToServer(site, authToken);
+                // refresh cache
+                await syncSitesOnAuthChange(authToken);
+                sendResponse({ ok: true, created });
+            } else if (request.action === 'onUserSignedIn') {
+                // called when user signs in on any browser; trigger a sync
+                const { authToken } = request;
+                // persist token locally and sync
+                chrome.storage.local.set({ authToken }, () => syncSitesOnAuthChange(authToken));
+                sendResponse({ ok: true });
+            } else {
+                sendResponse({ ok: false, error: 'unknown action' });
+            }
+        } catch (err) {
+            sendResponse({ ok: false, error: err.message });
+        }
+    })();
+    // return true for async sendResponse
+    return true;
 });
 
 // Handle storage changes
