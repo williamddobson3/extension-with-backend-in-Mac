@@ -4,8 +4,8 @@
 module.exports = {
     // Database Configuration
     DB_HOST: 'localhost',
-    DB_USER: 'root',
-    DB_PASSWORD: '',
+    DB_USER: 'backend_user',
+    DB_PASSWORD: 'cupideroskama200334!`#QWE',
     DB_NAME: 'website_monitor',
     DB_PORT: 3306,
 

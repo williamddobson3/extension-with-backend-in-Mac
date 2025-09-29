@@ -7,7 +7,7 @@ Write-Host "🔧 Fixing .env file..." -ForegroundColor Yellow
 $envContent = @"
 # Database Configuration   
 DB_HOST=localhost
-DB_USER=root
+DB_USER=backend_user
 DB_NAME=website_monitor    
 # Server Configuration
 PORT=3000

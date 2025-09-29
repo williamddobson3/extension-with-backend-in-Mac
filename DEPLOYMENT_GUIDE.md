@@ -18,7 +18,7 @@ Create a `.env` file in your project root with the following configuration:
 ```env
 # Production Database Configuration
 DB_HOST=103.179.45.102
-DB_USER=root
+DB_USER=backend_user
 DB_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 DB_NAME=website_monitor
 DB_PORT=3306

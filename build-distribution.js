@@ -271,7 +271,7 @@ This is a complete website monitoring system that includes:
 ### Database Settings (.env file)
 \`\`\`
 DB_HOST=localhost
-DB_USER=root
+    DB_USER=backend_user
 DB_PASSWORD=your_mysql_password_here
 DB_NAME=website_monitor
 DB_PORT=3306

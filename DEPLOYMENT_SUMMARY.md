@@ -80,7 +80,7 @@ node setup.js
 Make sure your `.env` file contains:
 ```env
 DB_HOST=103.179.45.102
-DB_USER=root
+DB_USER=backend_user
 DB_PASSWORD=YOUR_ACTUAL_DATABASE_PASSWORD
 DB_NAME=website_monitor
 DB_PORT=3306
