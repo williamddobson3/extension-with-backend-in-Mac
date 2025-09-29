@@ -4,8 +4,8 @@ const FixedWebsiteScraper = require('./services/fixedWebsiteScraper');
 // Database configuration
 const dbConfig = {
     host: 'localhost',
-    user: 'root',
-    password: '',
+    user: 'backend_user',
+    password: 'cupideroskama200334!`#QWE',
     database: 'website_monitor',
     waitForConnections: true,
     connectionLimit: 10,

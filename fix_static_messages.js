@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 async function fixStaticMessages() {
     const pool = mysql.createPool({
         host: 'localhost',
-        user: 'root',
-        password: '',
+        user: 'backend_user',
+        password: 'cupideroskama200334!`#QWE',
         database: 'website_monitor'
     });
 

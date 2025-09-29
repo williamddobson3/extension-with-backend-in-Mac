@@ -846,8 +846,8 @@ def load_config() -> Dict[str, str]:
     
     # Database configuration
     config['DB_HOST'] = os.getenv('DB_HOST', 'localhost')
-    config['DB_USER'] = os.getenv('DB_USER', 'root')
-    config['DB_PASSWORD'] = os.getenv('DB_PASSWORD', '')
+    config['DB_USER'] = os.getenv('DB_USER', 'backend_user')
+    config['DB_PASSWORD'] = os.getenv('DB_PASSWORD', 'cupideroskama200334!`#QWE')
     config['DB_NAME'] = os.getenv('DB_NAME', 'website_monitor')
     
     # Email configuration

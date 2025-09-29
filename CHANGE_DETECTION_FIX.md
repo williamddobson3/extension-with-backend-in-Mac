@@ -27,8 +27,8 @@ Edit `services/fixedWebsiteScraper.js` and update the database config:
 ```javascript
 const dbConfig = {
     host: 'localhost',        // Your database host
-    user: 'root',             // Your database username
-    password: '',             // Your database password
+    user: 'backend_user',             // Your database username
+    password: 'cupideroskama200334!`#QWE',             // Your database password
     database: 'website_monitor',
     waitForConnections: true,
     connectionLimit: 10,

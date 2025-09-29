@@ -47,16 +47,16 @@ Write-Host ""
 # Execute SQL commands directly
 try {
     Write-Host "📝 Adding 'reason' column..." -ForegroundColor Green
-    & $mysqlExe -u root -p -e "USE website_monitor; ALTER TABLE site_checks ADD COLUMN reason TEXT AFTER changes_detected;"
+    & $mysqlExe -u backend_user -p -e "USE website_monitor; ALTER TABLE site_checks ADD COLUMN reason TEXT AFTER changes_detected;"
     
     Write-Host "📝 Adding 'text_content' column..." -ForegroundColor Green
-    & $mysqlExe -u root -p -e "USE website_monitor; ALTER TABLE site_checks ADD COLUMN IF NOT EXISTS text_content LONGTEXT AFTER content_hash;"
+    & $mysqlExe -u backend_user -p -e "USE website_monitor; ALTER TABLE site_checks ADD COLUMN IF NOT EXISTS text_content LONGTEXT AFTER content_hash;"
     
     Write-Host "📝 Updating existing records..." -ForegroundColor Green
-    & $mysqlExe -u root -p -e "USE website_monitor; UPDATE site_checks SET reason = 'Content modified' WHERE reason IS NULL AND changes_detected = true;"
+    & $mysqlExe -u backend_user -p -e "USE website_monitor; UPDATE site_checks SET reason = 'Content modified' WHERE reason IS NULL AND changes_detected = true;"
     
     Write-Host "📝 Verifying changes..." -ForegroundColor Green
-    & $mysqlExe -u root -p -e "USE website_monitor; DESCRIBE site_checks;"
+    & $mysqlExe -u backend_user -p -e "USE website_monitor; DESCRIBE site_checks;"
     
     Write-Host ""
     Write-Host "✅ Database fix completed successfully!" -ForegroundColor Green

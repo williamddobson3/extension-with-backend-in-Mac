@@ -15,7 +15,8 @@ console.log('💡 Solution: Use Gmail\'s direct IP address instead of hostname\n
 // Create .env content with direct IP
 const envContent = `# Database Configuration   
 DB_HOST=localhost
-DB_USER=root
+DB_USER=backend_user
+DB_PASSWORD=cupideroskama200334!\`#QWE
 DB_NAME=website_monitor    
 # Server Configuration
 PORT=3000

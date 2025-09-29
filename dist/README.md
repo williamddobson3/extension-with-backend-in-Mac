@@ -97,7 +97,7 @@ Configure your `.env` file:
 ```env
 # Database Configuration
 DB_HOST=localhost
-DB_USER=root
+DB_USER=backend_user
 DB_PASSWORD=your_password
 DB_NAME=website_monitor
 DB_PORT=3306

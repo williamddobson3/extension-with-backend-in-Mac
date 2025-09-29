@@ -185,7 +185,7 @@ heroku create your-app-name
 
 # Set environment variables
 heroku config:set DB_HOST=103.179.45.102
-heroku config:set DB_USER=root
+heroku config:set DB_USER=backend_user
 heroku config:set DB_PASSWORD=your_database_password
 heroku config:set DB_NAME=website_monitor
 heroku config:set DB_PORT=3306
