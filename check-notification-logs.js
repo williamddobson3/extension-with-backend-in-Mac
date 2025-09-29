@@ -13,7 +13,7 @@ async function checkNotificationLogs() {
         connection = await mysql.createConnection({
             host: 'localhost',
             user: 'backend_user',
-            password: 'cupideroskama200334!@#QWE',
+            password: 'cupideroskama200334!`#QWE',
             database: 'website_monitor'
         });
 
