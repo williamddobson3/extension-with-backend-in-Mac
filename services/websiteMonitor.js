@@ -106,6 +106,7 @@ class WebsiteMonitor {
     // Fetch website content using axios (faster for simple sites)
     async fetchWithAxios(url) {
         try {
+            const startTime = Date.now();
             const response = await axios.get(url, {
                 headers: {
                     'User-Agent': this.userAgent,
@@ -118,12 +119,13 @@ class WebsiteMonitor {
                 timeout: 30000,
                 maxRedirects: 5
             });
-            
+            const responseTime = Date.now() - startTime;
+
             return {
                 success: true,
                 content: response.data,
                 statusCode: response.status,
-                responseTime: Date.now()
+                responseTime
             };
         } catch (error) {
             return {
@@ -239,9 +241,17 @@ class WebsiteMonitor {
     // Save check result to database
     async saveCheckResult(siteId, contentHash, contentLength, statusCode, responseTime, keywordsFound, textContent = '') {
         try {
+            // Defensive numeric sanitization to avoid SQL out-of-range errors
+            const MAX_INT = 2147483647; // MySQL signed INT max
+            let safeResponseTime = parseInt(responseTime, 10) || 0;
+            if (safeResponseTime > MAX_INT) safeResponseTime = MAX_INT;
+
+            let safeContentLength = parseInt(contentLength, 10) || 0;
+            if (safeContentLength > MAX_INT) safeContentLength = MAX_INT;
+
             const [result] = await pool.execute(
                 'INSERT INTO site_checks (site_id, content_hash, content_length, status_code, response_time_ms, changes_detected, text_content) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [siteId, contentHash, contentLength, statusCode, responseTime, keywordsFound, textContent]
+                [siteId, contentHash, safeContentLength, statusCode, safeResponseTime, keywordsFound ? 1 : 0, textContent]
             );
 
             // Update last check time
