@@ -977,11 +977,11 @@ async function testEmailNotification() {
             console.log('🧪 Comprehensive Test Results:', results);
             
         } else {
-            showNotification(data.message || 'Comprehensive test failed', 'error');
+           
         }
     } catch (error) {
         console.error('Comprehensive test error:', error);
-        showNotification('Comprehensive test failed due to network error', 'error');
+       
     }
 }
 
