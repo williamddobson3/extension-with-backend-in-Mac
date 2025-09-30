@@ -102,6 +102,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
+// Trusted handler: create native notification from background (more reliable on macOS)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request && request.action === 'showNativeNotification') {
+        try {
+            const title = request.title || 'Website Monitor';
+            const message = request.message || '';
+            const iconUrl = request.icon || chrome.runtime.getURL('icons/icon128.png');
+            if (chrome.notifications && typeof chrome.notifications.create === 'function') {
+                chrome.notifications.create('', {
+                    type: 'basic',
+                    iconUrl,
+                    title,
+                    message
+                }, (id) => {
+                    console.log('Background created native notification', id);
+                });
+            }
+        } catch (e) {
+            console.warn('Failed to create background notification', e);
+        }
+        // respond quickly
+        try { sendResponse({ ok: true }); } catch (e) {}
+        return true;
+    }
+    // not handled here
+});
+
 // Listen to messages from popup/content
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {

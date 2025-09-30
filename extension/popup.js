@@ -758,6 +758,40 @@ async function showChangeNotification(siteName, url, changeType, changeDetails) 
     // Show the change notification immediately
     console.log('🔔 Attempting to show notification in extension...');
     showNotification(message, 'warning');
+
+    // Also attempt to show a native system notification (works on macOS when allowed)
+    try {
+        if (chrome && chrome.notifications && typeof chrome.notifications.create === 'function') {
+            const notifOptions = {
+                type: 'basic',
+                iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+                title: `Website Monitor — ${siteName}`,
+                message: `${changeType}\n${changeDetails || ''}`.trim()
+            };
+            chrome.notifications.create('', notifOptions, (notifId) => {
+                // optional callback
+                console.log('Native notification created:', notifId);
+            });
+        }
+    } catch (e) {
+        // ignore - fallback to in-popup UI
+        console.warn('Failed to create native notification:', e);
+    }
+
+    // Also ask background to create a native notification (background notifications are more reliable on macOS)
+    try {
+        chrome.runtime.sendMessage({
+            action: 'showNativeNotification',
+            title: `Website Monitor — ${siteName}`,
+            message: `${changeType}\n${changeDetails || ''}`.trim(),
+            icon: chrome.runtime.getURL('icons/icon128.png')
+        }, (resp) => {
+            // optional callback
+            // console.log('Background notification response', resp);
+        });
+    } catch (e) {
+        console.warn('Failed to request background notification:', e);
+    }
     
     // Verify notification was displayed
     setTimeout(() => {
