@@ -1,9 +1,24 @@
 // Background service worker for Website Monitor extension
 
-const API_BASE = 'https://your-api.example.com'; // replace with your backend
+const DEFAULT_API_BASE = 'https://your-api.example.com'; // replace with your backend or set via extension settings
+
+// Helper to get API base from storage (allows per-user / per-environment override)
+async function getApiBase() {
+    return new Promise((resolve) => {
+        try {
+            chrome.storage.local.get(['apiBase'], (result) => {
+                if (result && result.apiBase) resolve(result.apiBase);
+                else resolve(DEFAULT_API_BASE);
+            });
+        } catch (e) {
+            resolve(DEFAULT_API_BASE);
+        }
+    });
+}
 
 // Fetch the shared monitored sites from central DB
 async function fetchMonitoredSitesFromServer(authToken = '') {
+    const API_BASE = await getApiBase();
     const res = await fetch(`${API_BASE}/monitored_sites`, {
         method: 'GET',
         headers: {
@@ -19,6 +34,7 @@ async function fetchMonitoredSitesFromServer(authToken = '') {
 
 // Add a monitored site to server
 async function addMonitoredSiteToServer(site, authToken = '') {
+    const API_BASE = await getApiBase();
     const res = await fetch(`${API_BASE}/monitored_sites`, {
         method: 'POST',
         headers: {

@@ -1,7 +1,37 @@
 // Global variables
 let currentUser = null;
 let authToken = null;
-const API_BASE_URL = 'http://49.212.153.246:3000/api';
+
+const DEFAULT_API_BASE_URL = 'http://49.212.153.246:3000/api';
+
+// Resolve API base from storage or fallback to default. Uses 'apiBase' storage key.
+async function getApiBaseUrl() {
+    return new Promise((resolve) => {
+        try {
+            chrome.storage.local.get(['apiBase'], (result) => {
+                let url = (result && result.apiBase) ? result.apiBase : DEFAULT_API_BASE_URL;
+                // Ensure it contains protocol. If user saved without protocol, prefer https.
+                if (!/^https?:\/\//i.test(url)) {
+                    url = 'https://' + url.replace(/^\/\//, '');
+                }
+                // Trim trailing slash
+                url = url.replace(/\/$/, '');
+                resolve(url);
+            });
+        } catch (e) {
+            resolve(DEFAULT_API_BASE_URL);
+        }
+    });
+}
+
+// Helper to call the API using the configured base URL
+async function fetchApi(path, options = {}) {
+    const base = await getApiBaseUrl();
+    // ensure path begins with '/'
+    const fullPath = path.startsWith('/') ? path : `/${path}`;
+    const url = `${base}${fullPath}`;
+    return fetch(url, options);
+}
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
@@ -218,7 +248,7 @@ async function handleLogin(event) {
     const password = document.getElementById('loginPassword').value;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        const response = await fetchApi('/auth/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -281,7 +311,7 @@ async function handleRegister(event) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        const response = await fetchApi('/auth/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -330,8 +360,9 @@ async function loadSites() {
         const headers = {};
         if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-        console.log('loadSites: calling', `${API_BASE_URL}/sites`, 'with headers', headers);
-        const response = await fetch(`${API_BASE_URL}/sites`, { headers });
+    const API_BASE_URL = await getApiBaseUrl();
+    console.log('loadSites: calling', `${API_BASE_URL}/sites`, 'with headers', headers);
+    const response = await fetchApi('/sites', { headers });
 
         // Debug: log response status, headers and raw body to help diagnose issues
         try {
@@ -456,7 +487,7 @@ async function handleAddSite(event) {
     const keywords = document.getElementById('keywords').value;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/sites`, {
+        const response = await fetchApi('/sites', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -488,7 +519,7 @@ async function handleAddSite(event) {
 // Edit site
 async function editSite(siteId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, {
+        const response = await fetchApi(`/sites/${siteId}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -526,7 +557,7 @@ async function handleEditSite(event) {
     const isActive = document.getElementById('editSiteActive').checked;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, {
+        const response = await fetchApi(`/sites/${siteId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -563,7 +594,7 @@ async function deleteSite(siteId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, {
+        const response = await fetchApi(`/sites/${siteId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${authToken}`
@@ -587,7 +618,7 @@ async function deleteSite(siteId) {
 // Manual check
 async function manualCheck(siteId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/sites/${siteId}/check`, {
+        const response = await fetchApi(`/sites/${siteId}/check`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`
@@ -650,7 +681,7 @@ function setupNotificationSettings() {
 // Load notification preferences
 async function loadNotificationPreferences() {
     try {
-        const response = await fetch(`${API_BASE_URL}/notifications/preferences`, {
+        const response = await fetchApi('/notifications/preferences', {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -673,7 +704,7 @@ async function loadNotificationPreferences() {
 // Update notification preferences
 async function updateNotificationPreferences(preferences) {
     try {
-        const response = await fetch(`${API_BASE_URL}/notifications/preferences`, {
+        const response = await fetchApi('/notifications/preferences', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -754,7 +785,7 @@ async function logToTerminal(source, level, message) {
         
         // Only try to log to backend if we have a valid auth token
         if (authToken && authToken !== 'null' && authToken !== 'undefined') {
-            const response = await fetch(`${API_BASE_URL}/notifications/log-frontend`, {
+            const response = await fetchApi('/notifications/log-frontend', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -808,7 +839,7 @@ async function checkForChanges() {
     try {
         console.log('🔍 Checking for recent changes...');
         
-        const response = await fetch(`${API_BASE_URL}/notifications/check-changes`, {
+        const response = await fetchApi('/notifications/check-changes', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`
@@ -853,7 +884,7 @@ async function testEmailNotification() {
         // Show loading state
         showNotification(' 包括的なシステムテストを開始します...', 'info');
         
-        const response = await fetch(`${API_BASE_URL}/notifications/test-email`, {
+        const response = await fetchApi('/notifications/test-email', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`
@@ -930,7 +961,7 @@ async function testLineNotification() {
         testLineBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> テスト中...';
         testLineBtn.disabled = true;
 
-        const response = await fetch(`${API_BASE_URL}/notifications/test-line`, {
+        const response = await fetchApi('/notifications/test-line', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`
@@ -997,7 +1028,7 @@ function setupProfileForms() {
 // Load profile data
 async function loadProfileData() {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        const response = await fetchApi('/auth/profile', {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -1020,7 +1051,7 @@ async function handleUpdateProfile(event) {
     const email = document.getElementById('profileEmail').value;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        const response = await fetchApi('/auth/profile', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1050,7 +1081,7 @@ async function handleChangePassword(event) {
     const newPassword = document.getElementById('newPassword').value;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        const response = await fetchApi('/auth/change-password', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1096,7 +1127,7 @@ async function clearStoredData() {
 
 async function verifyToken(token) {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+        const response = await fetchApi('/auth/verify', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -1110,7 +1141,7 @@ async function verifyToken(token) {
 
 async function getCurrentUser() {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        const response = await fetchApi('/auth/profile', {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -1192,10 +1223,21 @@ function setupAdminFunctions() {
 }
 
 // Open management window
-function openManagementWindow() {
+async function openManagementWindow() {
     try {
         // Create URL with token parameter
-    const managementUrl = `http://49.212.153.246:3000/admin?token=${encodeURIComponent(authToken)}`;
+    // Build management URL from configured API base (strip trailing /api if present)
+    const buildManagementUrl = async () => {
+        try {
+            let base = await getApiBaseUrl(); // e.g. https://example.com/api
+            // Strip trailing /api if exists to get server root
+            base = base.replace(/\/api\/?$/, '');
+            return `${base}/admin?token=${encodeURIComponent(authToken)}`;
+        } catch (e) {
+            return `http://49.212.153.246:3000/admin?token=${encodeURIComponent(authToken)}`;
+        }
+    };
+    const managementUrl = await buildManagementUrl();
         
         // Open new window
         const newWindow = window.open(managementUrl, 'userManagement', 'width=1200,height=800,scrollbars=yes,resizable=yes');

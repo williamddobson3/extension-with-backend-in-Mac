@@ -11,9 +11,43 @@ function injectQuickAddButton() {
         document.head.appendChild(fontAwesome);
     }
 
-    // Add to page
-    document.head.appendChild(style);
-    document.body.appendChild(button);
+    // Create styles and button safely (avoid referencing undefined variables)
+    const style = document.createElement('style');
+    style.textContent = `
+        #wm-quick-add-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10000;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+            cursor: pointer;
+        }
+    `;
+
+    const button = document.createElement('button');
+    button.id = 'wm-quick-add-btn';
+    button.title = 'Add page to Website Monitor';
+    button.innerHTML = '<i class="fas fa-plus" aria-hidden="true"></i>';
+
+    // Add to page (avoid duplicate injection)
+    if (!document.getElementById('wm-quick-add-btn')) {
+        try {
+            document.head.appendChild(style);
+            document.body.appendChild(button);
+        } catch (e) {
+            console.warn('Failed to inject quick add UI:', e);
+            return;
+        }
+    }
 
     // Add click handler
     button.addEventListener('click', handleQuickAdd);
